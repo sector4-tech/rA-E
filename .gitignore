@@ -151,3 +151,10 @@ Thumbs.db
 generated
 
 db/custom
+
+# Custom Server Configs (Sensitive Data Protection)
+conf/inter_athena.conf
+conf/char_athena.conf
+conf/login_athena.conf
+conf/map_athena.conf
+conf/web_athena.conf
