@@ -1,0 +1,60 @@
+//===== rAthena Script =======================================
+//= VIP Manager
+//===== Description: =========================================
+//= Lets players check, buy and extend VIP status with Zeny.
+//= Requires VIP_ENABLE (src/config/core.hpp) and a VIP group
+//= (conf/groups.yml Id 5 == vip_group in conf/login_athena.conf).
+//===== Configuration: =======================================
+//= Edit the prices (in Zeny) in the OnInit label below.
+//============================================================
+
+prontera,153,183,5	script	VIP Manager	4_F_KAFRA1,{
+	mes "[VIP Manager]";
+	if (vip_status(VIP_STATUS_ACTIVE)) {
+		.@remain = vip_status(VIP_STATUS_REMAINING);
+		mes "Your VIP status is ^00AA00active^000000.";
+		mes "Expires: ^0000FF" + gettimestr("%Y-%m-%d %H:%M:%S", 21, vip_status(VIP_STATUS_EXPIRE)) + "^000000";
+		mes "Remaining: " + (.@remain / 86400) + "d " + ((.@remain % 86400) / 3600) + "h " + ((.@remain % 3600) / 60) + "m";
+	} else {
+		mes "You are not a VIP member.";
+	}
+	next;
+	mes "[VIP Manager]";
+	mes "VIP benefits:";
+	mes "- +" + .vip_exp + "% Base/Job EXP, +" + .vip_drop + "% item drops";
+	mes "- Extra storage slots and extra character slots";
+	mes "- No gemstone requirement for skills";
+	mes "- Access to the #vip channel and @rates";
+	next;
+	switch (select(
+		"Buy 1 day - " + .price[0] + "z:" +
+		"Buy 7 days - " + .price[1] + "z:" +
+		"Buy 30 days - " + .price[2] + "z:" +
+		"Cancel")) {
+	case 1: .@i = 0; break;
+	case 2: .@i = 1; break;
+	case 3: .@i = 2; break;
+	case 4:
+		close;
+	}
+	mes "[VIP Manager]";
+	if (Zeny < .price[.@i]) {
+		mes "You don't have enough Zeny.";
+		close;
+	}
+	Zeny -= .price[.@i];
+	vip_time .days[.@i] * 1440; // minutes
+	mes "Thank you! " + .days[.@i] + " day(s) of VIP time were added.";
+	mes "Please ^FF0000re-login^000000 to fully apply all VIP benefits (extra storage / character slots).";
+	close;
+
+OnInit:
+	// Duration of each package in days
+	setarray .days, 1, 7, 30;
+	// Price of each package in Zeny
+	setarray .price, 500000, 3000000, 10000000;
+	// Display only; real values are in conf/battle/player.conf
+	.vip_exp  = 50;
+	.vip_drop = 50;
+	end;
+}

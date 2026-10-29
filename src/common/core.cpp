@@ -289,29 +289,31 @@ const char *get_git_hash (void) {
 }
 
 /*======================================
- *	CORE : Display title
- *  ASCII By CalciumKid 1/12/2011
+ *    Display title
  *--------------------------------------*/
 static void display_title(void) {
-	const char* svn = get_svn_revision();
-	const char* git = get_git_hash();
-
 	ShowMessage("\n");
-	ShowMessage("" CL_PASS "     " CL_BOLD "                                                                 " CL_PASS"" CL_CLL "" CL_NORMAL "\n");
-	ShowMessage("" CL_PASS "       " CL_BT_WHITE "            rAthena Development Team presents                  " CL_PASS "" CL_CLL "" CL_NORMAL "\n");
-	ShowMessage("" CL_PASS "     " CL_BOLD "                 ___   __  __                                    " CL_PASS "" CL_CLL "" CL_NORMAL "\n");
-	ShowMessage("" CL_PASS "     " CL_BOLD "           _____/   | / /_/ /_  ___  ____  ____ _                " CL_PASS "" CL_CLL "" CL_NORMAL "\n");
-	ShowMessage("" CL_PASS "     " CL_BOLD "          / ___/ /| |/ __/ __ \\/ _ \\/ __ \\/ __ `/                " CL_PASS "" CL_CLL "" CL_NORMAL "\n");
-	ShowMessage("" CL_PASS "     " CL_BOLD "         / /  / ___ / /_/ / / /  __/ / / / /_/ /                 " CL_PASS "" CL_CLL "" CL_NORMAL "\n");
-	ShowMessage("" CL_PASS "     " CL_BOLD "        /_/  /_/  |_\\__/_/ /_/\\___/_/ /_/\\__,_/                  " CL_PASS "" CL_CLL "" CL_NORMAL "\n");
-	ShowMessage("" CL_PASS "     " CL_BOLD "                                                                 " CL_PASS "" CL_CLL "" CL_NORMAL "\n");
-	ShowMessage("" CL_PASS "       " CL_GREEN "              http://rathena.org/board/                        " CL_PASS "" CL_CLL "" CL_NORMAL "\n");
-	ShowMessage("" CL_PASS "     " CL_BOLD "                                                                 " CL_PASS "" CL_CLL "" CL_NORMAL "\n");
-
-	if( svn[0] != UNKNOWN_VERSION )
-		ShowInfo("SVN Revision: '" CL_WHITE "%s" CL_RESET "'\n", svn);
-	else if( git[0] != UNKNOWN_VERSION )
-		ShowInfo("Git Hash: '" CL_WHITE "%s" CL_RESET "'\n", git);
+	ShowMessage(CL_BT_YELLOW "   •  " CL_BT_WHITE ": " CL_BT_YELLOW "Cut and Paste" CL_NORMAL "\n");
+	ShowMessage(CL_BT_GREEN  "   •  " CL_BT_WHITE ": " CL_BT_GREEN "I am Batman" CL_NORMAL "\n");
+	ShowMessage(CL_BT_BLUE   "   •  " CL_BT_WHITE ": " CL_BT_BLUE "Admin" CL_NORMAL "\n");
+	// ASCII Art
+	ShowMessage(CL_BT_GREEN "                                                ____________\n");
+	ShowMessage(CL_BT_GREEN "                                        ____.-~`  \\   \\   \\ `-\n");
+	ShowMessage(CL_BT_GREEN "                        ___,-----------'\\ __`.  `.----    ----`.\n");
+	ShowMessage(CL_BT_GREEN "    -=)))))))))))))))))`___ `__ ~~~~ __` |__ :   .     ...:::: :\n");
+	ShowMessage(CL_BT_GREEN "                           `-----------./_// '  ,...:::::::::'.'\n");
+	ShowMessage(CL_BT_GREEN "                                            `-./././././././.~\n");
+	ShowMessage(CL_BT_RED "    wrench " CL_BT_GREEN "\n");
+	ShowMessage(CL_BT_RED "                     Hacksaw:" CL_BT_GREEN "\n");
+	ShowMessage(CL_BT_GREEN "              _____________________________________\n");
+	ShowMessage(CL_BT_GREEN "             /  __   ____________________________  |\n");
+	ShowMessage(CL_BT_GREEN "            /  /  | |                            | |\n");
+	ShowMessage(CL_BT_GREEN "           /  /   | |                            | |\n");
+	ShowMessage(CL_BT_GREEN "          /  /____j |____________________________| |   Cut and Paste\n");
+	ShowMessage(CL_BT_GREEN "         (________(o)vvvvvvvvvvvvvvvvvvvvvvvvvvvv(o)\n");
+	ShowMessage(CL_BT_GREEN "                                                    \n");
+	ShowMessage(CL_BT_GREEN "--- Hi-CLASS Juti : Pre-Renewal ---\n" CL_NORMAL);
+	ShowMessage(CL_BT_GREEN " \n" CL_NORMAL);
 }
 
 // Warning if executed as superuser (root)

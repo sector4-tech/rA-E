@@ -10873,6 +10873,13 @@ bool pc_jobchange(map_session_data *sd,int32 job, char upper)
 	if (b_class == sd->class_)
 		return false; //Nothing to change.
 
+#ifdef HICLASS_ONLY
+	// Server is limited to High Class: block 3rd/4th jobs and later expanded classes.
+	if (pc_is_primary_third(b_class) || pc_is_primary_fourth(b_class) ||
+		pc_is_upper_expanded_first(b_class) || pc_is_upper_expanded_second(b_class))
+		return false;
+#endif
+
 	// If the job does not exist in the job db, dont allow changing to it
 	if( !job_db.exists( job ) ){
 		return false;
