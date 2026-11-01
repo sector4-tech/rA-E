@@ -33,6 +33,7 @@
 
 #include "achievement.hpp"
 #include "atcommand.hpp"
+#include "autobattle.hpp"
 #include "battle.hpp"
 #include "battleground.hpp"
 #include "cashshop.hpp"
@@ -15788,6 +15789,21 @@ BUILDIN_FUNC(atcommand) {
 	return atcommand_sub(st,0);
 }
 
+/// Toggles the Auto Battle system of the attached player.
+/// autobattle {<op>};  op: 0 = stop, 1 = start, 2 = toggle (default)
+BUILDIN_FUNC(autobattle) {
+	map_session_data* sd;
+
+	if (!script_rid2sd(sd))
+		return SCRIPT_CMD_FAILURE;
+
+	// ดึงค่า op หากไม่มีการระบุจาก NPC Script ให้ใช้ค่า Default เป็น 2 (Toggle)
+	int32 op = script_hasdata(st, 2) ? script_getnum(st, 2) : 2;
+	autobattle_script(*sd, op);
+
+	return SCRIPT_CMD_SUCCESS;
+}
+
 /** Displays a message for the player only (like system messages like "you got an apple" )
 * dispbottom("<message>"{,<color>{,<char_id>}})
 * @param message 
@@ -28212,6 +28228,7 @@ struct script_function buildin_func[] = {
 	BUILDIN_DEF(nude,"?"), // nude command [Valaris]
 	BUILDIN_DEF(mapwarp,"ssii??"),		// Added by RoVeRT
 	BUILDIN_DEF(atcommand,"s"), // [MouseJstr]
+	BUILDIN_DEF(autobattle,"?"),
 	BUILDIN_DEF2(atcommand,"charcommand","s"), // [MouseJstr]
 	BUILDIN_DEF(movenpc,"sii?"), // [MouseJstr]
 	BUILDIN_DEF(message,"ss"), // [MouseJstr]

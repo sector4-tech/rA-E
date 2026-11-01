@@ -44,6 +44,7 @@
 #include "log.hpp"
 #include "mapreg.hpp"
 #include "mercenary.hpp"
+#include "autobattle.hpp"
 #include "mob.hpp"
 #include "navi.hpp"
 #include "npc.hpp"
@@ -5057,6 +5058,7 @@ void MapServer::finalize(){
 	do_final_storage();
 	do_final_guild();
 	do_final_party();
+	do_final_autobattle();
 	do_final_pc();
 	do_final_pet();
 	do_final_homunculus();
@@ -5435,6 +5437,7 @@ bool MapServer::initialize( int32 argc, char *argv[] ){
 	do_init_skill();
 	do_init_mob();
 	do_init_pc();
+	do_init_autobattle();
 	do_init_status();
 	do_init_party();
 	do_init_guild();

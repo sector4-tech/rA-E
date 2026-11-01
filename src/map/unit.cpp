@@ -29,6 +29,7 @@
 #include "intif.hpp"
 #include "map.hpp"
 #include "mercenary.hpp"
+#include "autobattle.hpp"
 #include "mob.hpp"
 #include "npc.hpp"
 #include "party.hpp"
@@ -3927,6 +3928,8 @@ int32 unit_free(block_list *bl, clr_type clrtype)
 		case BL_PC: {
 			map_session_data *sd = (map_session_data*)bl;
 			int32 i;
+
+			autobattle_stop(*sd);
 
 			if( status_isdead(*bl) )
 				pc_setrestartvalue(sd,2);

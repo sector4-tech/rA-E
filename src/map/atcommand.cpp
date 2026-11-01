@@ -2,6 +2,7 @@
 // For more information, see LICENCE in the main folder
 
 #include "atcommand.hpp"
+#include "autobattle.hpp"
 
 #include <cmath>
 #include <cstdlib>
@@ -6985,6 +6986,15 @@ ACMD_FUNC(partyoption)
  * @autoloot by Upa-Kun
  * Turns on/off AutoLoot for a specific player
  *------------------------------------------*/
+/*==========================================
+ * @autobattle / @ab
+ *------------------------------------------*/
+ACMD_FUNC(autobattle)
+{
+	nullpo_retr(-1, sd);
+	return autobattle_command(*sd, message) ? 0 : -1;
+}
+
 ACMD_FUNC(autoloot)
 {
 	int32 rate;
@@ -11704,6 +11714,7 @@ void atcommand_basecommands(void) {
 		ACMD_DEF(undisguiseall),
 		ACMD_DEF(disguiseall),
 		ACMD_DEF(changelook),
+		ACMD_DEF(autobattle),
 		ACMD_DEF(autoloot),
 		ACMD_DEF(autolootitem),
 		ACMD_DEF(autoloottype),

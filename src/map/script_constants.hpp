@@ -1555,6 +1555,7 @@
 	export_constant(SC_QUEST_BUFF2);
 	export_constant(SC_QUEST_BUFF3);
 	export_constant(SC_ALL_RIDING);
+	export_constant(SC_AUTOBATTLE);
 	export_constant(SC_TEARGAS_SOB);
 	export_constant(SC__FEINTBOMB);
 	export_constant(SC__CHAOS);

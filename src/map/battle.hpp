@@ -678,6 +678,13 @@ struct Battle_Config
 	int32 feature_achievement;
 	int32 allow_bound_sell;
 	int32 autoloot_adjust;
+	int32 autobattle_enable;
+	int32 autobattle_interval;
+	int32 autobattle_search_range;
+	int32 autobattle_roam_radius;
+	int32 autobattle_item_only;
+	int32 autobattle_effect;
+	int32 autobattle_effect_interval;
 	int32 feature_petevolution;
 	int32 feature_pet_autofeed;
 	int32 feature_pet_autofeed_rate;

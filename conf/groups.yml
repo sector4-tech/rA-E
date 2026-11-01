@@ -82,6 +82,7 @@ Body:
       refresh: true
       noask: true
       noks: true
+      autobattle: true
       autoloot: true
       alootid: true
       autoloottype: true

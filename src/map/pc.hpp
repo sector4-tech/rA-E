@@ -901,6 +901,7 @@ public:
 
 	int16 last_addeditem_index; /// Index of latest item added
 	int32 autotrade_tid;
+	std::shared_ptr<struct s_autobattle> autobattle; ///< Auto Battle settings/state (autobattle.cpp)
 	int32 respawn_tid;
 	int32 bank_vault; ///< Bank Vault
 

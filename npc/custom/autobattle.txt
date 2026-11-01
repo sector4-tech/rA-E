@@ -1,0 +1,335 @@
+//===== rAthena Script =======================================
+//= Auto Battle - Dashboard UI (Thai)
+//============================================================
+
+-	script	AutoBattleUI	-1,{
+	end;
+
+OnOpen:
+	callfunc "F_ABUI";
+	end;
+}
+
+prontera,155,181,4	script	Auto Battle Manager	4_F_KAFRA1,{
+	callfunc "F_ABUI";
+	end;
+}
+
+function	script	F_ABUI	{
+	atcommand "@ab -q sync";
+
+	while (1) {
+		clear;
+		mes "^003366[ Dashboard : ระบบบอท ]^000000";
+		mes "สถานะปัจจุบัน: " + (@ab_running ? "^009900กำลังทำงาน^000000" : "^CC0000หยุดทำงาน^000000");
+		mes "--------------------------------";
+		
+		// สรุปข้อมูลหน้าเดียว
+		mes "^FF0000[ต่อสู้]^000000 ตีทุกตัว: " + (ab_flags & 1 ? "^009900ON^000000":"^CC0000OFF^000000");
+		mes "สกิลหลัก: " + (@ab_atkn$[0] != "" ? @ab_atkn$[0] : "ตีธรรมดา");
+		
+		mes "^0066FF[ฟื้นฟู]^000000 HP < " + (ab_pct1 & 0xFF) + "%";
+		mes "ยาปั้ม: " + (ab_hpitem ? getitemname(ab_hpitem) : "-");
+		
+		mes "^009900[เก็บของ]^000000 " + (ab_flags & 8 ? "เปิด (ระยะ " + ((ab_pct2 >> 8) & 0xFF) + " ช่อง)" : "ปิด");
+		mes "--------------------------------";
+
+		.@first$ = @ab_running ? ">> หยุดการทำงาน" : ">> เริ่มเปิดบอท";
+		.@s = select(
+			.@first$ + ":" +
+			"1. เป้าหมาย และ สกิล (Hunt):" +
+			"2. ปั้มยา และ ซัพพอร์ต (Recovery):" +
+			"3. เก็บของ และ ซื้อของ (Loot/Restock):" +
+			"4. ความปลอดภัย / วิงหนี (Safety):" +
+			"ปิดหน้าต่าง"
+		);
+		
+		switch (.@s) {
+		case 1:
+			if (@ab_running) atcommand "@ab -q stop";
+			else atcommand "@ab -q start";
+			break;
+		case 2:
+			.@sub = select("เป้าหมายการตี:สกิลโจมตี:สกิลบัฟ:กลับ");
+			if (.@sub == 1) callsub L_Hunt;
+			else if (.@sub == 2) callsub L_SkillSlots, "สกิลโจมตี", "skill", "ab_atk", 16, "attack";
+			else if (.@sub == 3) callsub L_SkillSlots, "สกิลบัฟ", "buff", "ab_buff", 8, "buff";
+			break;
+		case 3:
+			.@sub = select("ตั้งค่ายาปั้ม (HP/SP):ตั้งค่าสกิลซัพพอร์ต:กลับ");
+			if (.@sub == 1) callsub L_Recovery;
+			else if (.@sub == 2) callsub L_Support;
+			break;
+		case 4:
+			.@sub = select("ตั้งค่าเก็บของ:ตั้งค่าซื้อของอัตโนมัติ:กลับ");
+			if (.@sub == 1) callsub L_Loot;
+			else if (.@sub == 2) callsub L_Restock;
+			break;
+		case 5: callsub L_Safety; break;
+		case 6: close;
+		}
+	}
+	close;
+
+// ------------------------------------------------------------ helpers
+L_OnOff:
+	return (getarg(0) ? "^009900เปิด^000000" : "^CC0000ปิด^000000");
+
+L_ItemName:
+	if (getarg(0) <= 0) return "-";
+	return getitemname(getarg(0));
+
+L_AskItem:
+	clear;
+	mes "[" + getarg(0) + "]";
+	mes "พิมพ์ ID หรือชื่อภาษาอังกฤษของไอเทม:";
+	input .@s$;
+	return replacestr(.@s$, " ", "_");
+
+L_PickItem:
+	getinventorylist;
+	.@n = 0; .@m$ = "";
+	for (.@i = 0; .@i < @inventorylist_count && .@n < 15; .@i++) {
+		if (getiteminfo(@inventorylist_id[.@i], ITEMINFO_TYPE) == IT_HEALING) {
+			.@ids[.@n] = @inventorylist_id[.@i];
+			.@m$ += getitemname(@inventorylist_id[.@i]) + " (" + @inventorylist_amount[.@i] + "):";
+			.@n++;
+		}
+	}
+	clear;
+	mes "[เลือกไอเทมยาปั้ม]";
+	.@c = select(.@m$ + "พิมพ์ชื่อไอเทมเอง:ยกเลิก");
+	if (.@c == .@n + 2) return "";
+	if (.@c == .@n + 1) return callsub(L_AskItem, "เลือกไอเทม");
+	return "" + .@ids[.@c - 1];
+
+L_PickSkill:
+	atcommand "@ab -q skills " + getarg(0);
+	if (!@ab_skn) {
+		clear;
+		mes "[ระบบสกิล]";
+		mes "ไม่พบสกิลที่สามารถใช้งานได้ในหมวดนี้";
+		next; return 0;
+	}
+	.@page = 0; .@per = 9;
+	while (1) {
+		.@start = .@page * .@per;
+		.@cnt = min(.@per, @ab_skn - .@start);
+		.@m$ = "";
+		for (.@i = .@start; .@i < .@start + .@cnt; .@i++)
+			.@m$ += @ab_skname$[.@i] + " (Lv " + @ab_sklv[.@i] + "):";
+		.@more = (.@start + .@per < @ab_skn);
+		if (.@more) .@m$ += "หน้าถัดไป:";
+		if (.@page) .@m$ += "หน้าก่อนหน้า:";
+		clear;
+		mes "[เลือกสกิล] หน้า " + (.@page + 1);
+		.@c = select(.@m$ + "ยกเลิก") - 1;
+		if (.@c < .@cnt) {
+			.@id = @ab_skid[.@start + .@c];
+			.@max = @ab_sklv[.@start + .@c];
+			clear;
+			mes "เลือกระดับสกิล " + @ab_skname$[.@start + .@c] + " (1-" + .@max + "):";
+			input .@lv, 1, .@max;
+			return (.@id << 16) | .@lv;
+		}
+		.@c -= .@cnt;
+		if (.@more) { if (.@c == 0) { .@page++; continue; } .@c--; }
+		if (.@page) { if (.@c == 0) { .@page--; continue; } }
+		return 0;
+	}
+
+L_SkillSlots:
+	.@title$ = getarg(0); .@cmd$ = getarg(1); .@arr$ = getarg(2); .@n = getarg(3); .@kind$ = getarg(4);
+	while (1) {
+		.@m$ = "";
+		for (.@i = 0; .@i < .@n; .@i++) {
+			.@v = getd(.@arr$ + "[" + .@i + "]");
+			if (.@v) .@m$ += "[" + (.@i + 1) + "] " + getd("@" + .@arr$ + "n$[" + .@i + "]") + " Lv " + (.@v & 0xFFFF) + ":";
+			else .@m$ += "[" + (.@i + 1) + "] (ว่าง):";
+		}
+		clear;
+		mes "[" + .@title$ + "]";
+		.@c = select(.@m$ + "ล้างสกิลทั้งหมด:กลับ");
+		if (.@c == .@n + 2) return;
+		if (.@c == .@n + 1) { atcommand "@ab -q " + .@cmd$ + " clear all"; continue; }
+		.@slot = .@c - 1;
+		if (getd(.@arr$ + "[" + .@slot + "]")) {
+			clear; mes "ช่องที่ " + (.@slot + 1) + ":";
+			.@a = select("เปลี่ยนสกิล:ล้างสกิลช่องนี้:ยกเลิก");
+			if (.@a == 2) { atcommand "@ab -q " + .@cmd$ + " clear " + (.@slot + 1); continue; }
+			if (.@a == 3) continue;
+		}
+		.@p = callsub(L_PickSkill, .@kind$);
+		if (.@p) atcommand "@ab -q " + .@cmd$ + " " + (.@slot + 1) + " " + (.@p >> 16) + " " + (.@p & 0xFFFF);
+	}
+
+// ------------------------------------------------------------ Hunt
+L_Hunt:
+	while (1) {
+		clear;
+		mes "[เป้าหมาย]";
+		mes "ตีทุกตัว: " + callsub(L_OnOff, ab_flags & 1);
+		mes "ตีธรรมดา: " + callsub(L_OnOff, ab_flags & 2);
+		mes "ตอบโต้: " + callsub(L_OnOff, ab_flags & 4);
+		.@n = 0;
+		for (.@i = 0; .@i < 20; .@i++) {
+			if (ab_mob[.@i]) { mes " - " + getmonsterinfo(ab_mob[.@i], MOB_NAME); .@n++; }
+		}
+		if (!.@n) mes " (ไม่มีเป้าหมายเฉพาะ)";
+		.@s = select("เปิด/ปิด ตีทุกตัว:เปิด/ปิด ตีธรรมดา:เปิด/ปิด ตอบโต้:เพิ่มมอนสเตอร์:ลบมอนสเตอร์:ล้างเป้าหมายทั้งหมด:กลับ");
+		switch (.@s) {
+		case 1: atcommand "@ab -q all " + ((ab_flags & 1) ? "off" : "on"); break;
+		case 2: atcommand "@ab -q attack " + ((ab_flags & 2) ? "off" : "on"); break;
+		case 3: atcommand "@ab -q fightback " + ((ab_flags & 4) ? "off" : "on"); break;
+		case 4: callsub L_AddMob; break;
+		case 5: callsub L_DelMob; break;
+		case 6: atcommand "@ab -q mob reset"; break;
+		case 7: return;
+		}
+	}
+
+L_AddMob:
+	atcommand "@ab -q mobs";
+	.@m$ = "";
+	for (.@i = 0; .@i < @ab_mobn; .@i++) .@m$ += getmonsterinfo(@ab_mobid[.@i], MOB_NAME) + " (" + @ab_mobcnt[.@i] + " ตัว):";
+	clear;
+	mes "[เพิ่มมอนสเตอร์]";
+	.@c = select(.@m$ + "พิมพ์ชื่อเอง:ยกเลิก");
+	if (.@c == @ab_mobn + 2) return;
+	if (.@c == @ab_mobn + 1) {
+		clear; mes "พิมพ์ ID หรือชื่อมอนสเตอร์:";
+		input .@s$; .@s$ = replacestr(.@s$, " ", "_");
+		if (.@s$ != "") atcommand "@ab -q mob +" + .@s$;
+		return;
+	}
+	atcommand "@ab -q mob +" + @ab_mobid[.@c - 1]; return;
+
+L_DelMob:
+	.@n = 0; .@m$ = "";
+	for (.@i = 0; .@i < 20; .@i++) {
+		if (ab_mob[.@i]) { .@ids[.@n] = ab_mob[.@i]; .@m$ += getmonsterinfo(ab_mob[.@i], MOB_NAME) + ":"; .@n++; }
+	}
+	clear; mes "[ลบมอนสเตอร์]";
+	if (!.@n) { mes "ว่างเปล่า"; next; return; }
+	.@c = select(.@m$ + "ยกเลิก");
+	if (.@c > .@n) return;
+	atcommand "@ab -q mob -" + .@ids[.@c - 1]; return;
+
+// ------------------------------------------------------------ Recovery
+L_Recovery:
+	while (1) {
+		clear;
+		mes "[ฟื้นฟู]";
+		mes "ยา HP: " + callsub(L_ItemName, ab_hpitem) + " (< " + (ab_pct1 & 0xFF) + "%)";
+		mes "ยา SP: " + callsub(L_ItemName, ab_spitem) + " (< " + ((ab_pct1 >> 8) & 0xFF) + "%)";
+		.@s = select("เลือกยา HP:ตั้ง % HP:ยกเลิกยา HP:เลือกยา SP:ตั้ง % SP:ยกเลิกยา SP:กลับ");
+		switch (.@s) {
+		case 1: .@i$ = callsub(L_PickItem); if (.@i$ != "") atcommand "@ab -q hp " + .@i$; break;
+		case 4: .@i$ = callsub(L_PickItem); if (.@i$ != "") atcommand "@ab -q sp " + .@i$; break;
+		case 2: case 5:
+			.@t$ = (.@s == 2) ? "hp" : "sp"; .@item = (.@s == 2) ? ab_hpitem : ab_spitem;
+			clear;
+			if (!.@item) { mes "กรุณาเลือกยาก่อน"; next; break; }
+			mes "ใช้เมื่อ " + .@t$ + " ต่ำกว่า (1-99%):"; input .@v, 1, 99;
+			atcommand "@ab -q " + .@t$ + " " + .@item + " " + .@v; break;
+		case 3: atcommand "@ab -q hp off"; break;
+		case 6: atcommand "@ab -q sp off"; break;
+		case 7: return;
+		}
+	}
+
+// ------------------------------------------------------------ Support
+L_Support:
+	while (1) {
+		clear;
+		mes "[ซัพพอร์ต]";
+		mes "ฮีลปาร์ตี้เมื่อ HP < ^0000FF" + ((ab_pct1 >> 16) & 0xFF) + "%^000000";
+		.@s = select("ตั้งสกิลซัพพอร์ต:ตั้ง % HP ฮีลปาร์ตี้:กลับ");
+		if (.@s == 1) callsub L_SkillSlots, "สกิลซัพพอร์ต", "support", "ab_sup", 4, "support";
+		else if (.@s == 2) { clear; mes "ฮีลเมื่อ HP < (1-100%):"; input .@v, 1, 100; atcommand "@ab -q support hp " + .@v; }
+		else return;
+	}
+
+// ------------------------------------------------------------ Loot
+L_Loot:
+	while (1) {
+		clear;
+		mes "[เก็บของ]";
+		mes "เปิด/ปิด: " + callsub(L_OnOff, ab_flags & 8);
+		mes "ระยะ: " + ((ab_pct2 >> 8) & 0xFF) + " ช่อง";
+		.@n = 0;
+		for (.@i = 0; .@i < 30; .@i++) {
+			if (ab_loot[.@i]) { mes " - " + getitemname(ab_loot[.@i]); .@n++; }
+		}
+		if (!.@n) mes " (เก็บทุกอย่าง)";
+		.@s = select("เปิด/ปิด เก็บของ:ตั้งระยะ:เพิ่มไอเทมเฉพาะ:ลบไอเทมเฉพาะ:ล้าง (เก็บหมด):กลับ");
+		switch (.@s) {
+		case 1: atcommand "@ab -q loot " + ((ab_flags & 8) ? "off" : "on"); break;
+		case 2: clear; mes "ระยะ (1-14):"; input .@v, 1, 14; atcommand "@ab -q loot range " + .@v; break;
+		case 3: .@i$ = callsub(L_AskItem, "เพิ่มไอเทมเก็บ"); if (.@i$ != "") atcommand "@ab -q loot +" + .@i$; break;
+		case 4:
+			.@m$ = ""; .@k = 0;
+			for (.@i = 0; .@i < 30; .@i++) {
+				if (ab_loot[.@i]) { .@ids[.@k] = ab_loot[.@i]; .@m$ += getitemname(ab_loot[.@i]) + ":"; .@k++; }
+			}
+			clear; if (!.@k) { mes "ว่าง"; next; break; }
+			.@c = select(.@m$ + "ยกเลิก"); if (.@c <= .@k) atcommand "@ab -q loot -" + .@ids[.@c - 1]; break;
+		case 5: atcommand "@ab -q loot reset"; break;
+		case 6: return;
+		}
+	}
+
+// ------------------------------------------------------------ Restock
+L_Restock:
+	while (1) {
+		clear;
+		mes "[ซื้อของอัตโนมัติ]";
+		mes "สถานะ: " + callsub(L_OnOff, ab_flags & 16);
+		mes "วิงซื้อของเมื่อไอเทม < " + (ab_misc & 0xFFFF) + " ชิ้น";
+		.@n = 0;
+		for (.@i = 0; .@i < 8; .@i++) {
+			if (ab_rsid[.@i]) { mes " - " + getitemname(ab_rsid[.@i]) + " -> " + ab_rsamt[.@i]; .@n++; }
+		}
+		.@s = select("เปิด/ปิด Restock:เพิ่มไอเทม:ลบไอเทม:ตั้งค่าขั้นต่ำในการวิงซื้อ:ล้างรายการ:กลับ");
+		switch (.@s) {
+		case 1: atcommand "@ab -q restock " + ((ab_flags & 16) ? "off" : "on"); break;
+		case 2:
+			.@i$ = callsub(L_AskItem, "เพิ่มไอเทม"); if (.@i$ == "") break;
+			clear; mes "จำนวนที่ต้องการ (1-30000):"; input .@v, 1, 30000; atcommand "@ab -q restock +" + .@i$ + " " + .@v; break;
+		case 3:
+			.@m$ = ""; .@k = 0;
+			for (.@i = 0; .@i < 8; .@i++) {
+				if (ab_rsid[.@i]) { .@ids[.@k] = ab_rsid[.@i]; .@m$ += getitemname(ab_rsid[.@i]) + ":"; .@k++; }
+			}
+			clear; if (!.@k) { mes "ว่าง"; next; break; }
+			.@c = select(.@m$ + "ยกเลิก"); if (.@c <= .@k) atcommand "@ab -q restock -" + .@ids[.@c - 1]; break;
+		case 4: clear; mes "วิงกลับเมื่อของน้อยกว่า:"; input .@v, 1, 30000; atcommand "@ab -q restock min " + .@v; break;
+		case 5: atcommand "@ab -q restock reset"; break;
+		case 6: return;
+		}
+	}
+
+// ------------------------------------------------------------ Safety
+L_Safety:
+	while (1) {
+		clear;
+		mes "[ความปลอดภัย / วิงหนี]";
+		.@flee = (ab_pct1 >> 24) & 0xFF;
+		mes "วิงเมื่อ HP < " + (.@flee ? .@flee + "%" : "^CC0000ปิด^000000");
+		mes "ไอเทมวิง: " + callsub(L_ItemName, ab_fleeitem);
+		mes "หยุดบอทเมื่อคนอื่นเข้าใกล้: " + callsub(L_OnOff, ab_flags & 32);
+		mes "หยุดบอทเมื่อน้ำหนักเกิน: " + callsub(L_OnOff, ab_flags & 64) + " (" + (ab_pct2 & 0xFF) + "%)";
+		.@s = select("ตั้ง % HP วิงหนี:เลือกไอเทมวิง:เปิด/ปิด หยุดเมื่อคนเข้าใกล้:เปิด/ปิด หยุดเมื่อน้ำหนักเกิน:ตั้ง % น้ำหนักเกิน:กลับ");
+		switch (.@s) {
+		case 1: clear; mes "วิงเมื่อ HP < (0=ปิด):"; input .@v, 0, 90; atcommand "@ab -q safety hp " + .@v; break;
+		case 2: clear; .@c = select("Fly Wing:Butterfly Wing:ยกเลิก:ไม่ใช้");
+			if (.@c == 1) atcommand "@ab -q safety item 601";
+			else if (.@c == 2) atcommand "@ab -q safety item 602";
+			else if (.@c == 4) atcommand "@ab -q safety item off"; break;
+		case 3: atcommand "@ab -q safety player " + ((ab_flags & 32) ? "off" : "on"); break;
+		case 4: atcommand "@ab -q safety weight " + ((ab_flags & 64) ? "off" : "on"); break;
+		case 5: clear; mes "น้ำหนักเกิน (10-100%):"; input .@v, 10, 100; atcommand "@ab -q safety weight " + ((ab_flags & 64) ? "on" : "off") + " " + .@v; break;
+		case 6: return;
+		}
+	}
+}

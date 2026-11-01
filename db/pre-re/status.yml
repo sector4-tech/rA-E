@@ -6849,3 +6849,12 @@ Body:
       StopAttacking: true
       StopCasting: true
       BossResist: true
+  - Status: Autobattle
+    Icon: EFST_AUTOBERSERK
+    Flags:
+      BlEffect: true
+      NoSave: true
+      NoClearbuff: true
+      NoDispell: true
+      NoBanishingBuster: true
+      NoClearance: true

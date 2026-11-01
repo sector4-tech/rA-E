@@ -103,6 +103,13 @@ Body:
   - Command: auction
     Help: |
       Opens the auction window.
+  - Command: autobattle
+    Aliases:
+      - ab
+    Help: |
+      Params: start | stop | status | mobs | help
+      Server side Auto Battle: hunts monsters, uses skills, recovers, buffs, loots, restocks and stops for safety.
+      Type @autobattle help for the full list of settings.
   - Command: autoloot
     Help: |
       Params: <on|off|#>

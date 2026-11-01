@@ -50,6 +50,7 @@
 #include "log.hpp"
 #include "map.hpp"
 #include "mercenary.hpp"
+#include "autobattle.hpp"
 #include "mob.hpp"
 #include "npc.hpp"
 #include "party.hpp" // party_search()
@@ -9775,6 +9776,7 @@ void pc_close_npc(map_session_data *sd,int32 flag)
  *------------------------------------------*/
 int32 pc_dead(map_session_data *sd,block_list *src)
 {
+	autobattle_stop(*sd, "you died.");
 	int32 i=0,k=0;
 	t_tick tick = gettick();
 	struct map_data *mapdata = map_getmapdata(sd->m);
