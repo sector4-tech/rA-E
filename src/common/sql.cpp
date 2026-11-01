@@ -51,8 +51,12 @@ Sql* Sql_Malloc(void)
 	self->lengths = nullptr;
 	self->result = nullptr;
 	self->keepalive = INVALID_TIMER;
+	// MYSQL_OPT_RECONNECT is deprecated since MySQL 8.0.34 and prints a warning on every connection.
+	// Connections are kept alive by the keepalive timer (Sql_Ping), so skip the option there.
+#if !(defined(MYSQL_VERSION_ID) && MYSQL_VERSION_ID >= 80034 && !defined(MARIADB_BASE_VERSION) && !defined(MARIADB_VERSION_ID))
 	my_bool reconnect = 1;
 	mysql_options(&self->handle, MYSQL_OPT_RECONNECT, &reconnect);
+#endif
 	return self;
 }
 

@@ -1674,6 +1674,11 @@ enum adopt_responses pc_try_adopt( const map_session_data* p1_sd, const map_sess
 	if( !p1_sd || !p2_sd || !b_sd )
 		return ADOPT_CHARACTER_NOT_FOUND;
 
+#ifdef NO_BABY_CLASS
+	// Baby classes are disabled on this server, so adoption is disabled as well.
+	return ADOPT_NOT_NOVICE;
+#endif
+
 	if( b_sd->status.father || b_sd->status.mother || b_sd->adopt_invite )
 		return ADOPT_ALREADY_ADOPTED; // already adopted baby / in adopt request
 
@@ -10872,6 +10877,12 @@ bool pc_jobchange(map_session_data *sd,int32 job, char upper)
 
 	if (b_class == sd->class_)
 		return false; //Nothing to change.
+
+#ifdef NO_BABY_CLASS
+	// Baby classes are disabled on this server.
+	if (b_class&JOBL_BABY)
+		return false;
+#endif
 
 #ifdef HICLASS_ONLY
 	// Server is limited to High Class: block 3rd/4th jobs and later expanded classes.
