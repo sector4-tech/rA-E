@@ -2851,6 +2851,10 @@ int32 mob_getdroprate(block_list *src, std::shared_ptr<s_mob_db> mob, int32 base
 			if (sd->sc.getSCE(SC_PERIOD_RECEIVEITEM_2ND))
 				drop_rate_bonus += sd->sc.getSCE(SC_PERIOD_RECEIVEITEM_2ND)->val1;
 
+			// Party Bonus: members of a big enough party get a higher item drop rate
+			if (const s_party_bonus* party_bonus = party_bonus_get(sd))
+				drop_rate_bonus += party_bonus->drop;
+
 			int32 cap;
 
 			if (pc_isvip(sd)) { // Increase item drop rate for VIP.

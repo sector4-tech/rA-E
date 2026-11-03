@@ -8372,6 +8372,7 @@ int32 pc_checkjoblevelup(map_session_data *sd)
 static void pc_calcexp(map_session_data *sd, t_exp *base_exp, t_exp *job_exp, block_list *src)
 {
 	int32 bonus = 0, vip_bonus_base = 0, vip_bonus_job = 0;
+	int32 party_bonus_base = 0, party_bonus_job = 0;
 
 	if (src) {
 		status_data* status = status_get_status_data(*src);
@@ -8393,6 +8394,14 @@ static void pc_calcexp(map_session_data *sd, t_exp *base_exp, t_exp *job_exp, bl
 			vip_bonus_base = battle_config.vip_base_exp_increase;
 			vip_bonus_job = battle_config.vip_job_exp_increase;
 		}
+
+		// Party Bonus: every member of a big enough party gets extra EXP from monsters
+		if (src->type == BL_MOB) {
+			if (const s_party_bonus* party_bonus = party_bonus_get(sd)) {
+				party_bonus_base = party_bonus->base_exp;
+				party_bonus_job = party_bonus->job_exp;
+			}
+		}
 	}
 
 	// Give EXPBOOST for quests even if src is nullptr.
@@ -8406,7 +8415,7 @@ static void pc_calcexp(map_session_data *sd, t_exp *base_exp, t_exp *job_exp, bl
 		bonus += sd->sc.getSCE(SC_PERIOD_PLUSEXP_2ND)->val1;
 
 	if (*base_exp) {
-		t_exp exp = (t_exp)(*base_exp + ((double)*base_exp * ((bonus + vip_bonus_base) / 100.)));
+		t_exp exp = (t_exp)(*base_exp + ((double)*base_exp * ((bonus + vip_bonus_base + party_bonus_base) / 100.)));
 		*base_exp = cap_value(exp, 1, MAX_EXP);
 	}
 
@@ -8418,7 +8427,7 @@ static void pc_calcexp(map_session_data *sd, t_exp *base_exp, t_exp *job_exp, bl
 		bonus += sd->sc.getSCE(SC_PERIOD_PLUSEXP_2ND)->val1;
 
 	if (*job_exp) {
-		t_exp exp = (t_exp)(*job_exp + ((double)*job_exp * ((bonus + vip_bonus_job) / 100.)));
+		t_exp exp = (t_exp)(*job_exp + ((double)*job_exp * ((bonus + vip_bonus_job + party_bonus_job) / 100.)));
 		*job_exp = cap_value(exp, 1, MAX_EXP);
 	}
 

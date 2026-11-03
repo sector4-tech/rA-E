@@ -5,11 +5,15 @@
 #define PARTY_HPP
 
 #include <cstdarg>
+#include <memory>
+#include <string>
 
+#include <common/database.hpp> // TypesafeYamlDatabase
 #include <common/mmo.hpp> // struct party
 
 struct block_list;
 class map_session_data;
+class status_change;
 struct party;
 struct item;
 
@@ -98,6 +102,46 @@ int32 party_send_dot_remove(map_session_data *sd);
 int32 party_sub_count(block_list *bl, va_list ap);
 int32 party_sub_count_class(block_list *bl, va_list ap);
 int32 party_foreachsamemap(int32 (*func)(block_list *,va_list),const map_session_data* sd,int32 range,...);
+
+/*==========================================
+ * Party Bonus system (db/party_bonus.yml)
+ * The more (eligible) members are online in a party, the bigger the bonus every member receives.
+ *------------------------------------------*/
+struct s_party_bonus {
+	uint16 id = 0;				///< Tier id
+	std::string name;			///< Display name of the tier
+	uint16 min_members = 0;		///< Minimum eligible members for this tier
+	uint16 max_members = 0;		///< Maximum eligible members for this tier
+	int32 base_exp = 0;			///< Base EXP bonus in %
+	int32 job_exp = 0;			///< Job EXP bonus in %
+	int32 drop = 0;				///< Item drop rate bonus in %
+	int32 maxhp = 0;			///< MaxHP bonus in %
+	int32 maxsp = 0;			///< MaxSP bonus in %
+};
+
+class PartyBonusDatabase : public TypesafeYamlDatabase<uint16, s_party_bonus> {
+public:
+	PartyBonusDatabase() : TypesafeYamlDatabase("PARTY_BONUS_DB", 1) {
+
+	}
+
+	const std::string getDefaultLocation() override;
+	uint64 parseBodyNode(const ryml::NodeRef& node) override;
+	void loadingFinished() override;
+
+	std::shared_ptr<s_party_bonus> findByMembers( uint16 count );
+};
+
+extern PartyBonusDatabase party_bonus_db;
+
+const s_party_bonus* party_bonus_get(status_change* sc);
+const s_party_bonus* party_bonus_get(map_session_data* sd);
+int32 party_bonus_count(party_data* p, map_session_data* sd);
+void party_bonus_refresh_member(map_session_data* sd);
+void party_bonus_refresh(party_data* p);
+void party_bonus_clear(map_session_data* sd);
+void party_bonus_info(map_session_data* sd);
+void party_bonus_reload();
 
 /*==========================================
  * Party Booking in KRO [Spiria]

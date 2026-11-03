@@ -1,0 +1,79 @@
+# This file is a part of rAthena.
+#   Copyright(C) 2026 rAthena Development Team
+#   https://rathena.org - https://github.com/rathena
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+###########################################################################
+# Party Bonus Database
+###########################################################################
+#
+# Every member of a party receives the bonus of the tier that matches the number of
+# ELIGIBLE members (see conf/battle/party.conf: party_bonus_same_map / party_bonus_exclude_idle).
+# The more members, the bigger the bonus - it is given to EVERYONE in the party.
+#
+# Tier Settings
+###########################################################################
+# - Id                        Tier id (1 or higher). Lowest id wins when ranges overlap.
+#                             Tier ids 1~5 also show the icons EFST_PARTYEXP_LV1 ~ EFST_PARTYEXP_LV5.
+#   Name                      Name displayed to the players. (Default: "Tier <Id>")
+#   MinMembers                Minimum eligible members for this tier. (2 ~ MAX_PARTY)
+#   MaxMembers                Maximum eligible members for this tier. (2 ~ MAX_PARTY)
+#   BaseExp                   Base EXP bonus in %, from monsters. (Default: 0)
+#   JobExp                    Job EXP bonus in %, from monsters. (Default: 0)
+#   Drop                      Item drop rate bonus in % (additive with other drop bonuses). (Default: 0)
+#   MaxHp                     MaxHP bonus in %. (Default: 0)
+#   MaxSp                     MaxSP bonus in %. (Default: 0)
+###########################################################################
+
+Header:
+  Type: PARTY_BONUS_DB
+  Version: 1
+
+Body:
+  - Id: 1
+    Name: Squad
+    MinMembers: 2
+    MaxMembers: 3
+    BaseExp: 10
+    JobExp: 10
+    Drop: 10
+  - Id: 2
+    Name: Team
+    MinMembers: 4
+    MaxMembers: 6
+    BaseExp: 15
+    JobExp: 15
+    Drop: 15
+  - Id: 3
+    Name: Company
+    MinMembers: 7
+    MaxMembers: 9
+    BaseExp: 20
+    JobExp: 20
+    Drop: 20
+  - Id: 4
+    Name: Battalion
+    MinMembers: 10
+    MaxMembers: 12
+    BaseExp: 25
+    JobExp: 25
+    Drop: 25
+  - Id: 5
+    Name: Legion
+    MinMembers: 13
+    MaxMembers: 15
+    BaseExp: 30
+    JobExp: 30
+    Drop: 30

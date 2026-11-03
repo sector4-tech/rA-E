@@ -9169,6 +9169,33 @@ ACMD_FUNC(mapflag) {
 /*===================================
  * Remove some messages
  *-----------------------------------*/
+/**
+ * Party Bonus status of the player
+ * Usage: @partybonus
+ */
+ACMD_FUNC(partybonus)
+{
+	nullpo_retr(-1, sd);
+
+	party_bonus_info(sd);
+
+	return 0;
+}
+
+/**
+ * Reloads db/party_bonus.yml
+ * Usage: @reloadpartybonus
+ */
+ACMD_FUNC(reloadpartybonus)
+{
+	nullpo_retr(-1, sd);
+
+	party_bonus_reload();
+	clif_displaymessage(fd, msg_txt(sd, 1709)); // The Party Bonus database has been reloaded.
+
+	return 0;
+}
+
 ACMD_FUNC(showexp)
 {
 	if (sd->state.showexp) {
@@ -11738,6 +11765,8 @@ void atcommand_basecommands(void) {
 		ACMD_DEF(changegm),
 		ACMD_DEF(changeleader),
 		ACMD_DEF(partyoption),
+		ACMD_DEF(partybonus),
+		ACMD_DEF(reloadpartybonus),
 		ACMD_DEF(invite),
 		ACMD_DEF(duel),
 		ACMD_DEF(leave),

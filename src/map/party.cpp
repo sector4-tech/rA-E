@@ -4,6 +4,8 @@
 #include "party.hpp"
 
 #include <cstdlib>
+#include <iterator>
+#include <string>
 
 #include <common/cbasetypes.hpp>
 #include <common/malloc.hpp>
@@ -27,6 +29,7 @@
 #include "mob.hpp"
 #include "pc.hpp"
 #include "pc_groups.hpp"
+#include "status.hpp"
 #include "trade.hpp"
 
 static DBMap* party_db; // int32 party_id -> struct party_data* (releases data)
@@ -34,7 +37,10 @@ static DBMap* party_booking_db; // uint32 char_id -> struct party_booking_ad_inf
 static unsigned long party_booking_nextid = 1;
 
 TIMER_FUNC(party_send_xy_timer);
+TIMER_FUNC(party_bonus_timer);
 int32 party_create_byscript;
+
+PartyBonusDatabase party_bonus_db;
 
 /*==========================================
  * Fills the given party_member structure according to the sd provided.
@@ -108,6 +114,7 @@ void do_final_party(void)
 {
 	party_db->destroy(party_db,nullptr);
 	party_booking_db->destroy(party_booking_db,nullptr); // Party Booking [Spiria]
+	party_bonus_db.clear();
 }
 // Constructor, init vars
 void do_init_party(void)
@@ -116,6 +123,11 @@ void do_init_party(void)
 	party_booking_db = idb_alloc(DB_OPT_RELEASE_DATA); // Party Booking [Spiria]
 	add_timer_func_list(party_send_xy_timer, "party_send_xy_timer");
 	add_timer_interval(gettick()+battle_config.party_update_interval, party_send_xy_timer, 0, 0, battle_config.party_update_interval);
+
+	// Party Bonus system
+	party_bonus_db.load();
+	add_timer_func_list(party_bonus_timer, "party_bonus_timer");
+	add_timer_interval(gettick()+battle_config.party_bonus_interval, party_bonus_timer, 0, 0, battle_config.party_bonus_interval);
 }
 
 /// Party data lookup using party id.
@@ -633,6 +645,7 @@ void party_member_joined( map_session_data& sd ){
 
 	if (i < MAX_PARTY) {
 		p->data[i].sd = &sd;
+		party_bonus_refresh(p);
 	} else
 		sd.status.party_id = 0; //He does not belongs to the party really?
 }
@@ -691,6 +704,8 @@ int32 party_member_added(int32 party_id,uint32 account_id,uint32 char_id, int32 
 
 	if (p->instance_id > 0)
 		instance_reqinfo(sd, p->instance_id);
+
+	party_bonus_refresh(p); // Party Bonus: a new member changes the member count
 
 	return 0;
 }
@@ -843,7 +858,12 @@ int32 party_member_withdraw(int32 party_id, uint32 account_id, uint32 char_id, c
 				pc_setpos_savepoint( *sd );
 			}
 		}
+
+		party_bonus_clear(sd); // Party Bonus: the leaver loses the bonus
 	}
+
+	if( p != nullptr )
+		party_bonus_refresh(p); // Party Bonus: remaining members get recalculated
 
 	return 0;
 }
@@ -866,6 +886,7 @@ int32 party_broken(int32 party_id)
 		if( p->data[i].sd != nullptr ) {
 			clif_party_withdraw( *p->data[i].sd, p->party.member[i].account_id, p->party.member[i].name, PARTY_MEMBER_WITHDRAW_EXPEL, SELF );
 			p->data[i].sd->status.party_id=0;
+			party_bonus_clear(p->data[i].sd); // Party Bonus: party disbanded
 		}
 	}
 
@@ -1035,6 +1056,8 @@ int32 party_recv_movemap( int32 party_id, uint32 account_id, uint32 char_id, int
 
 	clif_party_info( *p );
 
+	party_bonus_refresh(p); // Party Bonus: login / logout / map change alters the eligible member count
+
 	return 0;
 }
 
@@ -1094,6 +1117,8 @@ int32 party_send_logout(map_session_data *sd)
 		memset(&p->data[i], 0, sizeof(p->data[0]));
 	else
 		ShowError("party_send_logout: Failed to locate member %d:%d in party %d!\n", sd->status.account_id, sd->status.char_id, p->party.party_id);
+
+	party_bonus_refresh(p); // Party Bonus: remaining members get recalculated
 
 	return 1;
 }
@@ -1574,4 +1599,476 @@ bool party_booking_delete(map_session_data *sd)
 	}
 
 	return true;
+}
+
+
+
+/*==========================================
+ * Party Bonus system
+ *
+ * Every member of a party gets a bonus (EXP, Job EXP, drop rate, MaxHP, MaxSP) that grows with the number
+ * of eligible members. The tiers are defined in db/party_bonus.yml and the result is carried by the status
+ * change SC_PARTY_BONUS (val1 = tier id, val2 = member count), which also shows the status icon.
+ *------------------------------------------*/
+
+const std::string PartyBonusDatabase::getDefaultLocation() {
+	return std::string(db_path) + "/party_bonus.yml";
+}
+
+/**
+ * Reads and parses an entry from the party_bonus database.
+ * @param node: YAML node containing the entry.
+ * @return count of successfully parsed rows
+ */
+uint64 PartyBonusDatabase::parseBodyNode(const ryml::NodeRef& node) {
+	uint16 id;
+
+	if (!this->asUInt16(node, "Id", id))
+		return 0;
+
+	if (id == 0) {
+		this->invalidWarning(node["Id"], "Tier Id has to be at least 1.\n");
+		return 0;
+	}
+
+	std::shared_ptr<s_party_bonus> bonus = this->find(id);
+	bool exists = bonus != nullptr;
+
+	if (!exists) {
+		if (!this->nodesExist(node, { "MinMembers", "MaxMembers" }))
+			return 0;
+
+		bonus = std::make_shared<s_party_bonus>();
+		bonus->id = id;
+	}
+
+	if (this->nodeExists(node, "Name")) {
+		std::string name;
+
+		if (!this->asString(node, "Name", name))
+			return 0;
+
+		bonus->name = name;
+	} else if (!exists) {
+		bonus->name = "Tier " + std::to_string(id);
+	}
+
+	if (this->nodeExists(node, "MinMembers")) {
+		uint16 value;
+
+		if (!this->asUInt16(node, "MinMembers", value))
+			return 0;
+
+		if (value < 2 || value > MAX_PARTY) {
+			this->invalidWarning(node["MinMembers"], "MinMembers %hu is invalid (valid range: 2~%d), skipping.\n", value, MAX_PARTY);
+			return 0;
+		}
+
+		bonus->min_members = value;
+	}
+
+	if (this->nodeExists(node, "MaxMembers")) {
+		uint16 value;
+
+		if (!this->asUInt16(node, "MaxMembers", value))
+			return 0;
+
+		if (value < 2 || value > MAX_PARTY) {
+			this->invalidWarning(node["MaxMembers"], "MaxMembers %hu is invalid (valid range: 2~%d), skipping.\n", value, MAX_PARTY);
+			return 0;
+		}
+
+		bonus->max_members = value;
+	}
+
+	if (bonus->min_members > bonus->max_members) {
+		this->invalidWarning(node, "MinMembers (%hu) is greater than MaxMembers (%hu), skipping.\n", bonus->min_members, bonus->max_members);
+		return 0;
+	}
+
+	struct s_field {
+		const char* key;
+		int32* target;
+	};
+	const s_field fields[] = {
+		{ "BaseExp", &bonus->base_exp },
+		{ "JobExp", &bonus->job_exp },
+		{ "Drop", &bonus->drop },
+		{ "MaxHp", &bonus->maxhp },
+		{ "MaxSp", &bonus->maxsp },
+	};
+
+	for (const s_field& field : fields) {
+		if (!this->nodeExists(node, field.key))
+			continue;
+
+		int32 value;
+
+		if (!this->asInt32(node, field.key, value))
+			return 0;
+
+		if (value < 0 || value > 1000) {
+			this->invalidWarning(node[c4::to_csubstr(field.key)], "%s %d is invalid (valid range: 0~1000), skipping.\n", field.key, value);
+			return 0;
+		}
+
+		*field.target = value;
+	}
+
+	if (!exists)
+		this->put(id, bonus);
+
+	return 1;
+}
+
+void PartyBonusDatabase::loadingFinished() {
+	// Warn about overlapping tiers, the tier with the lowest id wins.
+	for (auto a = this->data.begin(); a != this->data.end(); ++a) {
+		for (auto b = std::next(a); b != this->data.end(); ++b) {
+			if (a->second->min_members <= b->second->max_members && b->second->min_members <= a->second->max_members) {
+				ShowWarning("PartyBonusDatabase: tiers %hu and %hu have overlapping member ranges (%hu~%hu / %hu~%hu), tier %hu takes priority.\n",
+					a->first, b->first, a->second->min_members, a->second->max_members, b->second->min_members, b->second->max_members, a->first);
+			}
+		}
+	}
+
+	TypesafeYamlDatabase::loadingFinished();
+}
+
+/**
+ * Finds the tier that applies to the given amount of members.
+ * @param count: Number of eligible party members
+ * @return tier or nullptr if the amount is not covered by any tier
+ */
+std::shared_ptr<s_party_bonus> PartyBonusDatabase::findByMembers( uint16 count ) {
+	std::shared_ptr<s_party_bonus> found = nullptr;
+
+	for (const auto& it : this->data) {
+		if (count >= it.second->min_members && count <= it.second->max_members && (found == nullptr || it.second->id < found->id))
+			found = it.second;
+	}
+
+	return found;
+}
+
+/**
+ * Gets the active party bonus tier of a status change container.
+ * @param sc: Status change container
+ * @return tier or nullptr when the bonus is not active
+ */
+const s_party_bonus* party_bonus_get(status_change* sc) {
+	if (sc == nullptr || !battle_config.party_bonus_enable)
+		return nullptr;
+
+	status_change_entry* sce = sc->getSCE(SC_PARTY_BONUS);
+
+	if (sce == nullptr)
+		return nullptr;
+
+	return party_bonus_db.find(static_cast<uint16>(sce->val1)).get();
+}
+
+/**
+ * Gets the active party bonus tier of a player.
+ * @param sd: Player
+ * @return tier or nullptr when the bonus is not active
+ */
+const s_party_bonus* party_bonus_get(map_session_data* sd) {
+	if (sd == nullptr)
+		return nullptr;
+
+	return party_bonus_get(&sd->sc);
+}
+
+/**
+ * Checks if a member counts for the party bonus of 'sd'.
+ * Members that are offline, not on a map yet, autotrading, vending or (optionally) idle / on another map don't count.
+ */
+static bool party_bonus_eligible(map_session_data* member, map_session_data* sd) {
+	if (member == nullptr || member->prev == nullptr)
+		return false;
+
+	if (member->state.autotrade || member->state.vending || member->state.buyingstore)
+		return false;
+
+	if (battle_config.party_bonus_same_map && member->m != sd->m)
+		return false;
+
+	if (battle_config.party_bonus_exclude_idle && battle_config.idle_no_share && pc_isidle_party(member))
+		return false;
+
+	return true;
+}
+
+/**
+ * Counts how many party members count for the bonus of 'sd'.
+ * @param p: Party data
+ * @param sd: Player the count is made for (always counted when eligible)
+ * @return Eligible member count (0 if 'sd' itself is not eligible)
+ */
+int32 party_bonus_count(party_data* p, map_session_data* sd) {
+	nullpo_ret(p);
+	nullpo_ret(sd);
+
+	if (!party_bonus_eligible(sd, sd))
+		return 0;
+
+	int32 count = 0;
+
+	for (int32 i = 0; i < MAX_PARTY; i++) {
+		map_session_data* member = p->data[i].sd;
+
+		if (member == sd || party_bonus_eligible(member, sd))
+			count++;
+	}
+
+	return count;
+}
+
+/**
+ * Builds the readable bonus list of a tier, only values above 0 are listed.
+ * Example: "Base EXP +10%, Job EXP +10%"
+ */
+static std::string party_bonus_describe(map_session_data* sd, const s_party_bonus* bonus) {
+	struct s_part {
+		int32 msg;
+		int32 value;
+	};
+	const s_part parts[] = {
+		{ 1712, bonus->base_exp }, // Base EXP +%d%%
+		{ 1713, bonus->job_exp },  // Job EXP +%d%%
+		{ 1714, bonus->drop },     // Drop +%d%%
+		{ 1715, bonus->maxhp },    // MaxHP +%d%%
+		{ 1716, bonus->maxsp },    // MaxSP +%d%%
+	};
+	std::string text;
+	char buf[CHAT_SIZE_MAX];
+
+	for (const s_part& part : parts) {
+		if (part.value <= 0)
+			continue;
+
+		safesnprintf(buf, sizeof(buf), msg_txt(sd, part.msg), part.value);
+
+		if (!text.empty())
+			text += ", ";
+
+		text += buf;
+	}
+
+	return text;
+}
+
+/// Gets the tier icon status of a tier id (1~5), SC_NONE when the tier has no icon.
+static sc_type party_bonus_tier_sc(uint16 tier_id) {
+	if (tier_id < 1 || tier_id > 5)
+		return SC_NONE;
+
+	return static_cast<sc_type>(SC_PARTY_BONUS_LV1 + (tier_id - 1));
+}
+
+/// Ends the party bonus status and every tier icon of a player.
+static void party_bonus_end(map_session_data* sd) {
+	status_change_end(sd, SC_PARTY_BONUS);
+
+	for (int32 i = SC_PARTY_BONUS_LV1; i <= SC_PARTY_BONUS_LV5; i++)
+		status_change_end(sd, static_cast<sc_type>(i));
+}
+
+/// Sends a Party Bonus notification to the player.
+static void party_bonus_notify(map_session_data* sd, const s_party_bonus* bonus, int32 count) {
+	if (!battle_config.party_bonus_notify || sd->fd == 0)
+		return;
+
+	char output[CHAT_SIZE_MAX];
+
+	if (bonus != nullptr) {
+		// [Party Bonus] %s - %d members: %s
+		safesnprintf(output, sizeof(output), msg_txt(sd, 1700), bonus->name.c_str(), count, party_bonus_describe(sd, bonus).c_str());
+	} else {
+		// [Party Bonus] The bonus has ended.
+		safesnprintf(output, sizeof(output), "%s", msg_txt(sd, 1701));
+	}
+
+	clif_messagecolor(sd, color_table[COLOR_LIGHT_GREEN], output, false, SELF);
+}
+
+/**
+ * Recalculates the party bonus of one player and applies / updates / removes SC_PARTY_BONUS.
+ * @param sd: Player
+ */
+void party_bonus_refresh_member(map_session_data* sd) {
+	nullpo_retv(sd);
+
+	// Not on a map yet (login / map change in progress), the periodic timer will catch up.
+	if (sd->prev == nullptr)
+		return;
+
+	std::shared_ptr<s_party_bonus> bonus = nullptr;
+	int32 count = 0;
+
+	if (battle_config.party_bonus_enable && sd->status.party_id != 0) {
+		party_data* p = party_search(sd->status.party_id);
+
+		if (p != nullptr) {
+			count = party_bonus_count(p, sd);
+
+			if (count >= 2)
+				bonus = party_bonus_db.findByMembers(static_cast<uint16>(count));
+		}
+	}
+
+	status_change_entry* sce = sd->sc.getSCE(SC_PARTY_BONUS);
+
+	if (bonus == nullptr) {
+		if (sce != nullptr) {
+			party_bonus_end(sd);
+			party_bonus_notify(sd, nullptr, 0);
+		}
+		return;
+	}
+
+	sc_type tier_sc = party_bonus_tier_sc(bonus->id);
+
+	if (sce != nullptr) {
+		if (sce->val1 == bonus->id) {
+			sce->val2 = count; // same tier, only the displayed member count changes
+
+			// Make sure the tier icon is still there
+			if (tier_sc != SC_NONE && sd->sc.getSCE(tier_sc) == nullptr)
+				status_change_start(sd, sd, tier_sc, 10000, bonus->id, 0, 0, 0, INFINITE_TICK, SCSTART_NOAVOID | SCSTART_NOTICKDEF);
+			return;
+		}
+
+		// Tier changed: remove the old tier icon and the old bonus first.
+		party_bonus_end(sd);
+	}
+
+	// Icon 1 (icon_party_member_.tga) carries the bonus, icon 2 (EFST_PARTYEXP_LVx.tga) shows the tier.
+	if (status_change_start(sd, sd, SC_PARTY_BONUS, 10000, bonus->id, count, 0, 0, INFINITE_TICK, SCSTART_NOAVOID | SCSTART_NOTICKDEF)) {
+		if (tier_sc != SC_NONE)
+			status_change_start(sd, sd, tier_sc, 10000, bonus->id, 0, 0, 0, INFINITE_TICK, SCSTART_NOAVOID | SCSTART_NOTICKDEF);
+
+		party_bonus_notify(sd, bonus.get(), count);
+	}
+}
+
+/**
+ * Recalculates the party bonus of all online members of a party.
+ * @param p: Party data
+ */
+void party_bonus_refresh(party_data* p) {
+	nullpo_retv(p);
+
+	for (int32 i = 0; i < MAX_PARTY; i++) {
+		if (p->data[i].sd != nullptr)
+			party_bonus_refresh_member(p->data[i].sd);
+	}
+}
+
+/**
+ * Removes the party bonus from a player (left / kicked / party disbanded).
+ * @param sd: Player
+ */
+void party_bonus_clear(map_session_data* sd) {
+	nullpo_retv(sd);
+
+	if (sd->sc.getSCE(SC_PARTY_BONUS) == nullptr)
+		return;
+
+	party_bonus_end(sd);
+	party_bonus_notify(sd, nullptr, 0);
+}
+
+/// Periodic safety net: keeps every party in sync (idle state changes, missed events, revived members...).
+TIMER_FUNC(party_bonus_timer) {
+	if (!battle_config.party_bonus_enable)
+		return 0;
+
+	DBIterator* iter = db_iterator(party_db);
+
+	for (party_data* p = static_cast<party_data*>(dbi_first(iter)); dbi_exists(iter); p = static_cast<party_data*>(dbi_next(iter)))
+		party_bonus_refresh(p);
+
+	dbi_destroy(iter);
+
+	return 0;
+}
+
+/**
+ * Shows the Party Bonus status of the player (@partybonus).
+ * @param sd: Player
+ */
+void party_bonus_info(map_session_data* sd) {
+	nullpo_retv(sd);
+
+	char output[CHAT_SIZE_MAX];
+
+	if (!battle_config.party_bonus_enable) {
+		clif_displaymessage(sd->fd, msg_txt(sd, 1710)); // The Party Bonus system is disabled.
+		return;
+	}
+
+	party_data* p = party_search(sd->status.party_id);
+
+	if (p == nullptr) {
+		clif_displaymessage(sd->fd, msg_txt(sd, 1702)); // You are not in a party.
+		return;
+	}
+
+	int32 count = party_bonus_count(p, sd);
+
+	clif_displaymessage(sd->fd, msg_txt(sd, 1704)); // ---- Party Bonus ----
+	safesnprintf(output, sizeof(output), msg_txt(sd, 1705), count, static_cast<int32>(p->party.count)); // Eligible members: %d (party size: %d)
+	clif_displaymessage(sd->fd, output);
+
+	const s_party_bonus* active = party_bonus_get(sd);
+
+	if (active != nullptr) {
+		safesnprintf(output, sizeof(output), msg_txt(sd, 1706), active->name.c_str(), active->min_members, active->max_members); // Active: %s (%d~%d members)
+		clif_displaymessage(sd->fd, output);
+		safesnprintf(output, sizeof(output), msg_txt(sd, 1707), party_bonus_describe(sd, active).c_str()); // Bonus: %s
+		clif_displaymessage(sd->fd, output);
+	} else {
+		clif_displaymessage(sd->fd, msg_txt(sd, 1703)); // No bonus is active right now.
+	}
+
+	// Find the next tier that needs more members than we have now.
+	std::shared_ptr<s_party_bonus> next = nullptr;
+
+	for (const auto& it : party_bonus_db) {
+		if (it.second->min_members > count && (next == nullptr || it.second->min_members < next->min_members))
+			next = it.second;
+	}
+
+	if (next != nullptr) {
+		safesnprintf(output, sizeof(output), msg_txt(sd, 1708), next->min_members, next->name.c_str(), party_bonus_describe(sd, next.get()).c_str()); // Next tier at %d members (%s): %s
+		clif_displaymessage(sd->fd, output);
+	}
+
+	if (battle_config.party_bonus_same_map)
+		clif_displaymessage(sd->fd, msg_txt(sd, 1711)); // Only members on the same map count.
+}
+
+/// Reloads db/party_bonus.yml and re-applies the bonus to every party.
+void party_bonus_reload() {
+	party_bonus_db.reload();
+
+	// Restart every active bonus so the new values (and the MaxHP / MaxSP recalculation) take effect.
+	map_session_data* sd;
+	struct s_mapiterator* iter = mapit_getallusers();
+
+	for (sd = static_cast<map_session_data*>(mapit_first(iter)); mapit_exists(iter); sd = static_cast<map_session_data*>(mapit_next(iter))) {
+		if (sd->sc.getSCE(SC_PARTY_BONUS) != nullptr)
+			party_bonus_end(sd);
+	}
+
+	mapit_free(iter);
+
+	DBIterator* piter = db_iterator(party_db);
+
+	for (party_data* p = static_cast<party_data*>(dbi_first(piter)); dbi_exists(piter); p = static_cast<party_data*>(dbi_next(piter)))
+		party_bonus_refresh(p);
+
+	dbi_destroy(piter);
 }

@@ -9953,6 +9953,63 @@ Body:
       NoDispell: true
       NoBanishingBuster: true
       NoClearance: true
+  - Status: Party_Bonus
+    Icon: Icon: EFST_PARTY_MEMBER
+    CalcFlags:
+      MaxHp: true
+      MaxSp: true
+    Flags:
+      NoRemoveOnDead: true
+      NoClearbuff: true
+      NoDispell: true
+      NoBanishingBuster: true
+      NoClearance: true
+      NoSave: true
+  - Status: Party_Bonus_Lv1
+    Icon: EFST_PARTYEXP_LV1
+    Flags:
+      NoRemoveOnDead: true
+      NoClearbuff: true
+      NoDispell: true
+      NoBanishingBuster: true
+      NoClearance: true
+      NoSave: true
+  - Status: Party_Bonus_Lv2
+    Icon: EFST_PARTYEXP_LV2
+    Flags:
+      NoRemoveOnDead: true
+      NoClearbuff: true
+      NoDispell: true
+      NoBanishingBuster: true
+      NoClearance: true
+      NoSave: true
+  - Status: Party_Bonus_Lv3
+    Icon: EFST_PARTYEXP_LV3
+    Flags:
+      NoRemoveOnDead: true
+      NoClearbuff: true
+      NoDispell: true
+      NoBanishingBuster: true
+      NoClearance: true
+      NoSave: true
+  - Status: Party_Bonus_Lv4
+    Icon: EFST_PARTYEXP_LV4
+    Flags:
+      NoRemoveOnDead: true
+      NoClearbuff: true
+      NoDispell: true
+      NoBanishingBuster: true
+      NoClearance: true
+      NoSave: true
+  - Status: Party_Bonus_Lv5
+    Icon: EFST_PARTYEXP_LV5
+    Flags:
+      NoRemoveOnDead: true
+      NoClearbuff: true
+      NoDispell: true
+      NoBanishingBuster: true
+      NoClearance: true
+      NoSave: true
   - Status: Autobattle
     Icon: EFST_AUTOBERSERK
     Flags:

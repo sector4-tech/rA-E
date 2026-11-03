@@ -31,6 +31,7 @@
 #include "mob.hpp"
 #include "npc.hpp"
 #include "path.hpp"
+#include "party.hpp"
 #include "pc.hpp"
 #include "pc_groups.hpp"
 #include "pet.hpp"
@@ -3243,6 +3244,8 @@ static int32 status_get_hpbonus(block_list *bl, enum e_status_bonus type) {
 				bonus += sc->getSCE(SC_LUXANIMA)->val3;
 			if (sc->getSCE(SC_FIRM_FAITH))
 				bonus += sc->getSCE(SC_FIRM_FAITH)->val2;
+			if (const s_party_bonus* party_bonus = party_bonus_get(sc)) // Party Bonus
+				bonus += party_bonus->maxhp;
 
 			//Decreasing
 			if (sc->getSCE(SC_VENOMBLEED) && sc->getSCE(SC_VENOMBLEED)->val3 == 1)
@@ -3376,6 +3379,8 @@ static int32 status_get_spbonus(block_list *bl, enum e_status_bonus type) {
 				bonus += sc->getSCE(SC_MERC_SPUP)->val2;
 			if (sc->getSCE(SC_LUXANIMA))
 				bonus += sc->getSCE(SC_LUXANIMA)->val3;
+			if (const s_party_bonus* party_bonus = party_bonus_get(sc)) // Party Bonus
+				bonus += party_bonus->maxsp;
 
 			//Decreasing
 			if (sc->getSCE(SC_MELODYOFSINK))
