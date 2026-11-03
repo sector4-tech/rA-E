@@ -271,7 +271,9 @@ static void ab_load(map_session_data& sd, s_autobattle& ab) {
 	int64 misc = ab_get(sd, "ab_misc");
 	if (misc & (1LL << 30)) {
 		ab.restock_min = misc & 0xFFFF;
-		ab.idle_seconds = (misc >> 16) & 0xFFFF;
+		ab.idle_seconds = (misc >> 16) & 0x3FFF; // bit 30 is the "saved" marker, not part of this value
+		if (ab.idle_seconds > 3600)
+			ab.idle_seconds = 3600;
 	}
 	if (ab.loot_range < 1 || ab.loot_range > 14) ab.loot_range = 8;
 	if (ab.weight_pct < 10 || ab.weight_pct > 100) ab.weight_pct = 90;
