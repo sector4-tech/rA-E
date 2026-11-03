@@ -6915,3 +6915,15 @@ Body:
       NoDispell: true
       NoBanishingBuster: true
       NoClearance: true
+  - Status: Quest_Buff3
+    Icon: EFST_QUEST_BUFF3
+    Flags:
+      NoSave: true
+      NoRemoveOnDead: true
+      NoClearbuff: true
+      NoDispell: true
+      NoBanishingBuster: true
+      NoClearance: true
+    Script: |
+      // rA-E Race System: val1 = race id (see npc/custom/race_system.txt)
+      callfunc "F_RaceBonus", getstatus(SC_QUEST_BUFF3, 1);

@@ -88682,3 +88682,32 @@ Body:
     Script: |
       // item scripts cannot keep a dialog open: open the menu from a real NPC event right after
       addtimer 100, "AutoBattleUI::OnOpenItem";
+  - Id: 32501
+    AegisName: Race_Roll
+    Name: Race Roll
+    Type: Etc
+    Weight: 0
+  - Id: 32502
+    AegisName: Race_Slot_Key
+    Name: Race Slot Key
+    Type: Etc
+    Weight: 0
+  - Id: 32503
+    AegisName: Race_Book
+    Name: Race Book
+    Type: Usable
+    Weight: 0
+    Flags:
+      NoConsume: true
+    Trade:
+      NoDrop: true
+      NoTrade: true
+      NoSell: true
+      NoCart: true
+      NoStorage: true
+      NoGuildStorage: true
+      NoMail: true
+      NoAuction: true
+    Script: |
+      // item scripts cannot keep a dialog open: open the menu from a real NPC event right after
+      addtimer 100, "RaceSystem::OnOpenItem";

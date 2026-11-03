@@ -1,0 +1,368 @@
+//===== rAthena Script =======================================
+//= Race System (Thai) - rA-E custom
+//===== Description: =========================================
+//= Inspired by the Roblox "Races" system.
+//=  - 10 races with different roll chances, 3 star levels each
+//=  - 6 race slots: slots 1-2 are free, slots 3-6 are opened with Race Slot Key
+//=  - a Race Roll item re-rolls every slot that is not locked
+//=  - rolling a race you already own raises its stars (shared by all slots)
+//=  - ONE active slot gives the bonuses, hat effect and status icon
+//===== Items: ===============================================
+//= 32501 Race_Roll      - one roll of all unlocked slots
+//= 32502 Race_Slot_Key  - opens the next extra slot (3..6)
+//= 32503 Race_Book      - opens this menu (also: @race)
+//===== Notes: ===============================================
+//= ** SAVE AS TIS-620 / cp874 ** (Thai client)
+//= Bonuses are applied by the status SC_QUEST_BUFF3 (db/pre-re/status.yml)
+//= which calls function F_RaceBonus below.
+//= Permanent char variables: race_s1..6 (race in slot), race_lock (bitmask),
+//= race_open (extra slots opened 0..4), race_act (active slot 1..6),
+//= race_st1..10 (stars of each race 0..3)
+//============================================================
+
+-	script	RaceSystem	-1,{
+	end;
+
+OnInit:
+	bindatcmd "race", "RaceSystem::OnOpen";
+	end;
+
+OnOpen:
+	callfunc "F_RaceUI";
+	end;
+
+OnOpenItem:
+	callfunc "F_RaceUI";
+	end;
+
+OnPCLoginEvent:
+	callfunc "F_RaceApply";
+	end;
+}
+
+prontera,152,181,4	script	Race Master	4_F_KAFRA1,{
+	if (countitem(32503) < 1) {
+		mes "[Race Master]";
+		mes "ยินดีต้อนรับ! นี่คือสมุดเผ่า (Race Book)";
+		mes "ใช้เปิดเมนูระบบเผ่าได้ทุกที่ หรือพิมพ์ ^0000FF@race^000000";
+		getitem 32503, 1;
+		close2;
+	}
+	callfunc "F_RaceUI";
+	end;
+}
+
+// ---- data: F_RaceData(race, field) -------------------------------
+// field 0 name | 1 chance in 1/1000 | 2 color | 3 hat effect id | 4 perks "type:s1:s2:s3,..."
+// perk types: 1 EXP% 2 Drop% 3 -Skill delay% 4 ATK% 5 MATK% 6 DEF% 7 Move speed% 8 CRI 9 MaxHP% 10 MaxSP% 11 Heal power%
+function	script	F_RaceData	{
+	.@r = getarg(0);
+	.@f = getarg(1);
+	switch (.@r) {
+	case 1:  .@n$ = "Human";     .@p = 269; .@c$ = "^555555"; .@h = 0;                          .@k$ = "1:3:5:8,9:2:4:6"; break;
+	case 2:  .@n$ = "Goblin";    .@p = 256; .@c$ = "^15803D"; .@h = HAT_EF_C_DRAGON_GREEN_AURA;   .@k$ = "7:6:9:12,1:4:6:8"; break;
+	case 3:  .@n$ = "Skeleton";  .@p = 245; .@c$ = "^6B7280"; .@h = HAT_EF_C_EYE_OF_NECROMANCER;  .@k$ = "4:3:5:8,6:3:5:8"; break;
+	case 4:  .@n$ = "Yeti";      .@p = 127; .@c$ = "^0369A1"; .@h = HAT_EF_PERM_FROST_OBLIVION;   .@k$ = "6:4:7:10,9:4:7:10,10:3:5:8"; break;
+	case 5:  .@n$ = "Vampire";   .@p = 56;  .@c$ = "^7E22CE"; .@h = HAT_EF_BOTTOM_BLOODYLUST;     .@k$ = "4:4:7:10,8:3:5:8,3:3:5:8"; break;
+	case 6:  .@n$ = "Dragonkin"; .@p = 23;  .@c$ = "^C2410C"; .@h = HAT_EF_C_DRAGON_YELLOW_AURA;  .@k$ = "4:5:8:12,5:5:8:12,9:5:8:12,7:5:8:10"; break;
+	case 7:  .@n$ = "Void-Elf";  .@p = 15;  .@c$ = "^1D4ED8"; .@h = HAT_EF_COSMIC_CONNECTION;     .@k$ = "2:10:15:20,7:8:12:16,3:8:12:18"; break;
+	case 8:  .@n$ = "Demon";     .@p = 4;   .@c$ = "^B91C1C"; .@h = HAT_EF_C_DARK_LORD_CLOAK;     .@k$ = "1:15:22:30,2:20:30:40,5:10:16:22,3:10:15:20,7:10:15:20,8:8:13:18"; break;
+	case 9:  .@n$ = "Angel";     .@p = 3;   .@c$ = "^B45309"; .@h = HAT_EF_BLESSING_OF_ANGELS;    .@k$ = "9:10:16:22,10:10:16:22,6:8:13:18,11:10:16:22,3:8:13:18,1:12:18:25"; break;
+	case 10: .@n$ = "Lavakin";   .@p = 2;   .@c$ = "^0F766E"; .@h = HAT_EF_C_SWIRLING_FLAME;     .@k$ = "1:20:28:36,3:12:18:25,4:10:16:24,6:10:16:24,7:10:15:20,8:8:13:20"; break;
+	default: .@n$ = "-"; .@p = 0; .@c$ = "^000000"; .@h = 0; .@k$ = ""; break;
+	}
+	switch (.@f) {
+	case 0: return .@n$;
+	case 1: return .@p;
+	case 2: return .@c$;
+	case 3: return .@h;
+	}
+	return .@k$;
+}
+
+// Text label of a perk type
+function	script	F_RacePerkName	{
+	switch (getarg(0)) {
+	case 1:  return "EXP";
+	case 2:  return "Drop";
+	case 3:  return "ลดดีเลย์สกิล";
+	case 4:  return "ATK";
+	case 5:  return "MATK";
+	case 6:  return "DEF";
+	case 7:  return "ความเร็วเดิน";
+	case 8:  return "CRI";
+	case 9:  return "MaxHP";
+	case 10: return "MaxSP";
+	case 11: return "พลังฮีล";
+	}
+	return "?";
+}
+
+// Applies the bonuses of race getarg(0). Called from the status script (SC_QUEST_BUFF3) so bonus commands work.
+function	script	F_RaceBonus	{
+	.@r = getarg(0);
+	if (.@r < 1 || .@r > 10)
+		return;
+	.@st = getd("race_st" + .@r);
+	if (.@st < 1)
+		.@st = 1;
+	if (.@st > 3)
+		.@st = 3;
+	deletearray .@perk$[0], getarraysize(.@perk$);
+	explode(.@perk$, F_RaceData(.@r, 4), ",");
+	.@n = getarraysize(.@perk$);
+	for (.@i = 0; .@i < .@n; .@i++) {
+		explode(.@v$, .@perk$[.@i], ":");
+		.@val = atoi(.@v$[.@st]);
+		switch (atoi(.@v$[0])) {
+		case 1:  bonus2 bExpAddRace, RC_All, .@val; break;
+		case 2:  bonus2 bDropAddRace, RC_All, .@val; break;
+		case 3:  bonus bDelayrate, -.@val; break;
+		case 4:  bonus2 bAddRace, RC_All, .@val; break;
+		case 5:  bonus bMatkRate, .@val; break;
+		case 6:  bonus bDefRate, .@val; break;
+		case 7:  bonus bSpeedRate, .@val; break;
+		case 8:  bonus bCritical, .@val; break;
+		case 9:  bonus bMaxHPrate, .@val; break;
+		case 10: bonus bMaxSPrate, .@val; break;
+		case 11: bonus bHealPower, .@val; break;
+		}
+	}
+	return;
+}
+
+// (Re)applies the active race: status (bonus + icon) and hat effect
+function	script	F_RaceApply	{
+	.@a = race_act;
+	.@r = 0;
+	if (.@a >= 1 && .@a <= 6)
+		.@r = getd("race_s" + .@a);
+	sc_end SC_QUEST_BUFF3;
+	for (.@i = 1; .@i <= 10; .@i++) {
+		.@h = F_RaceData(.@i, 3);
+		if (.@h)
+			hateffect .@h, (.@i == .@r);
+	}
+	if (.@r)
+		sc_start SC_QUEST_BUFF3, -1, .@r;
+	return;
+}
+
+// star text "1/3"
+function	script	F_RaceStarTxt	{
+	return getarg(0) + "/3 ดาว";
+}
+
+function	script	F_RaceUI	{
+	if (race_inited == 0) {
+		race_inited = 1;
+		race_act = 0;
+	}
+	while (1) {
+		.@avail = 2 + race_open;
+		callsub L_Title, "ระบบเผ่า";
+		for (.@i = 1; .@i <= 6; .@i++) {
+			.@r = getd("race_s" + .@i);
+			.@line$ = "[" + .@i + "] ";
+			if (.@i > .@avail) {
+				.@line$ += "^9CA3AF(ยังไม่ปลดล็อกช่อง)^000000";
+			} else if (!.@r) {
+				.@line$ += "^9CA3AF- ว่าง -^000000";
+			} else {
+				.@line$ += F_RaceData(.@r, 2) + F_RaceData(.@r, 0) + "^000000 (" + F_RaceStarTxt(getd("race_st" + .@r)) + ")";
+			}
+			if (.@i <= .@avail && (race_lock & (1 << .@i)))
+				.@line$ += " ^B91C1C[ล็อก]^000000";
+			if (.@i == race_act)
+				.@line$ += " ^15803D[ใช้งาน]^000000";
+			mes .@line$;
+		}
+		mes " ";
+		mes "Race Roll: " + countitem(32501) + "  |  Race Slot Key: " + countitem(32502);
+		.@s = select("สุ่มเผ่า (ใช้ Race Roll 1 ชิ้น)", "เลือกเผ่าที่ใช้งาน", "ล็อก / ปลดล็อกช่อง", "ปลดช่องเพิ่ม (Race Slot Key)", "ดูโบนัสของเผ่า", "ปิด");
+		switch (.@s) {
+		case 1: callsub L_Roll, .@avail; break;
+		case 2: callsub L_Pick, .@avail; break;
+		case 3: callsub L_Lock, .@avail; break;
+		case 4: callsub L_Open; break;
+		case 5: callsub L_Info; break;
+		default:
+			callsub L_Title, "ระบบเผ่า";
+			mes "ปิดเมนูแล้ว พิมพ์ ^0000FF@race^000000 เพื่อเปิดอีกครั้ง";
+			close;
+		}
+	}
+	end;
+
+L_Roll:
+	.@avail = getarg(0);
+	.@n = 0;
+	for (.@i = 1; .@i <= .@avail; .@i++)
+		if (!(race_lock & (1 << .@i)))
+			.@n++;
+	if (!.@n) {
+		callsub L_Msg, "ทุกช่องถูกล็อกอยู่ ไม่มีช่องให้สุ่ม";
+		return;
+	}
+	if (countitem(32501) < 1) {
+		callsub L_Msg, "ต้องมี Race Roll อย่างน้อย 1 ชิ้น";
+		return;
+	}
+	callsub L_Title, "ยืนยันการสุ่ม";
+	mes "จะสุ่มใหม่ ^B91C1C" + .@n + " ช่อง^000000 (ช่องที่ล็อกไม่ถูกสุ่ม)";
+	mes "ใช้ Race Roll 1 ชิ้น";
+	mes "ได้เผ่าที่มีอยู่แล้ว = เพิ่มดาว (ทุกช่องใช้ดาวร่วมกัน)";
+	if (select("สุ่มเลย", "ยกเลิก") != 1)
+		return;
+	if (countitem(32501) < 1)
+		return;
+	delitem 32501, 1;
+	deletearray .@hit[0], getarraysize(.@hit);
+	for (.@i = 1; .@i <= .@avail; .@i++) {
+		if (race_lock & (1 << .@i))
+			continue;
+		.@x = rand(1000);
+		.@acc = 0;
+		.@pick = 1;
+		for (.@r = 1; .@r <= 10; .@r++) {
+			.@acc += F_RaceData(.@r, 1);
+			if (.@x < .@acc) {
+				.@pick = .@r;
+				break;
+			}
+		}
+		setd "race_s" + .@i, .@pick;
+		.@hit[.@pick] = 1;
+	}
+	callsub L_Title, "ผลการสุ่ม";
+	for (.@r = 1; .@r <= 10; .@r++) {
+		if (!.@hit[.@r])
+			continue;
+		.@old = getd("race_st" + .@r);
+		.@new = (.@old < 3) ? .@old + 1 : 3;
+		setd "race_st" + .@r, .@new;
+		.@t$ = F_RaceData(.@r, 2) + F_RaceData(.@r, 0) + "^000000 : ";
+		if (.@old == 0)
+			.@t$ += "^15803D เผ่าใหม่! ^000000" + F_RaceStarTxt(.@new);
+		else if (.@old < 3)
+			.@t$ += "^15803D ดาวเพิ่ม " + .@old + " -> " + .@new + "^000000";
+		else
+			.@t$ += "ดาวเต็มแล้ว (3/3)";
+		mes .@t$;
+	}
+	if (race_act < 1 || race_act > .@avail || !getd("race_s" + race_act))
+		race_act = 0;
+	callfunc "F_RaceApply";
+	next;
+	return;
+
+L_Pick:
+	.@avail = getarg(0);
+	callsub L_Title, "เลือกเผ่าที่ใช้งาน";
+	.@menu$ = "";
+	for (.@i = 1; .@i <= 6; .@i++) {
+		.@r = (.@i <= .@avail) ? getd("race_s" + .@i) : 0;
+		if (.@r)
+			.@menu$ += "[" + .@i + "] " + F_RaceData(.@r, 0) + " (" + getd("race_st" + .@r) + "/3)" + (.@i == race_act ? " *" : "") + ":";
+		else
+			.@menu$ += "[" + .@i + "] -:";
+	}
+	.@menu$ += "ไม่ใช้เผ่า (ปิดโบนัส):ยกเลิก";
+	.@c = select(.@menu$);
+	if (.@c == 8)
+		return;
+	if (.@c == 7) {
+		race_act = 0;
+	} else {
+		if (.@c > .@avail || !getd("race_s" + .@c)) {
+			callsub L_Msg, "ช่องนี้ยังไม่มีเผ่า";
+			return;
+		}
+		race_act = .@c;
+	}
+	callfunc "F_RaceApply";
+	callsub L_Msg, "เปลี่ยนเผ่าที่ใช้งานเรียบร้อย";
+	return;
+
+L_Lock:
+	.@avail = getarg(0);
+	callsub L_Title, "ล็อก / ปลดล็อกช่อง";
+	mes "ช่องที่ล็อกจะไม่ถูกสุ่มทับ";
+	.@menu$ = "";
+	for (.@i = 1; .@i <= 6; .@i++) {
+		if (.@i > .@avail)
+			.@menu$ += "[" + .@i + "] (ยังไม่ปลดล็อก):";
+		else
+			.@menu$ += "[" + .@i + "] " + ((race_lock & (1 << .@i)) ? "ปลดล็อก" : "ล็อก") + ":";
+	}
+	.@menu$ += "ยกเลิก";
+	.@c = select(.@menu$);
+	if (.@c >= 7 || .@c > .@avail)
+		return;
+	race_lock = race_lock ^ (1 << .@c);
+	return;
+
+L_Open:
+	if (race_open >= 4) {
+		callsub L_Msg, "ปลดล็อกครบทุกช่องแล้ว";
+		return;
+	}
+	if (countitem(32502) < 1) {
+		callsub L_Msg, "ต้องมี Race Slot Key 1 ชิ้นเพื่อปลดช่องที่ " + (3 + race_open);
+		return;
+	}
+	delitem 32502, 1;
+	race_open++;
+	callsub L_Msg, "ปลดล็อกช่องที่ " + (2 + race_open) + " แล้ว";
+	return;
+
+L_Info:
+	callsub L_Title, "เลือกเผ่าที่ต้องการดู";
+	.@menu$ = "";
+	for (.@r = 1; .@r <= 10; .@r++)
+		.@menu$ += F_RaceData(.@r, 0) + " (" + (F_RaceData(.@r, 1) / 10) + "." + (F_RaceData(.@r, 1) % 10) + "%):";
+	.@menu$ += "ยกเลิก";
+	.@r = select(.@menu$);
+	if (.@r > 10)
+		return;
+	callsub L_Title, F_RaceData(.@r, 0);
+	.@st = getd("race_st" + .@r);
+	mes F_RaceData(.@r, 2) + F_RaceData(.@r, 0) + "^000000  โอกาสสุ่ม " + (F_RaceData(.@r, 1) / 10) + "." + (F_RaceData(.@r, 1) % 10) + "%";
+	mes "ดาวที่มี: " + .@st + "/3";
+	mes " ";
+	deletearray .@perk$[0], getarraysize(.@perk$);
+	explode(.@perk$, F_RaceData(.@r, 4), ",");
+	.@n = getarraysize(.@perk$);
+	for (.@i = 0; .@i < .@n; .@i++) {
+		explode(.@v$, .@perk$[.@i], ":");
+		.@t$ = F_RacePerkName(atoi(.@v$[0])) + " +";
+		for (.@j = 1; .@j <= 3; .@j++) {
+			.@t$ += (.@j == .@st ? "^15803D" : "^9CA3AF") + .@v$[.@j] + "^000000";
+			if (.@j < 3)
+				.@t$ += " / ";
+		}
+		mes .@t$;
+	}
+	next;
+	return;
+
+L_Msg:
+	callsub L_Title, "ระบบเผ่า";
+	mes getarg(0);
+	next;
+	return;
+
+L_Clr:
+	mes " ";
+	clear;
+	return;
+
+L_Title:
+	setdialogsize 520, 440;
+	callsub L_Clr;
+	setdialogalign DIALOG_ALIGN_LEFT;
+	mes "^1E3A8A== RACE SYSTEM ==^000000";
+	mes "^0F766E" + getarg(0) + "^000000";
+	mes "^9CA3AF------------------------------------------^000000";
+	return;
+}
