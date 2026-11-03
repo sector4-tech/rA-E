@@ -123,8 +123,11 @@ L_Bye:
 
 // Styled header of every screen. getarg(0) = title. Also enlarges the dialog window.
 L_Title:
-	// setdialogsize resets the text position of the client window, so it must come BEFORE the first mes
+	// Resizing the window leaves the client's text position wrong, so: size -> blank mes + clear -> align,
+	// and only then the real text (without this the lines are drawn over the header)
 	setdialogsize 520, 440;
+	callsub L_Clr;
+	setdialogalign DIALOG_ALIGN_LEFT;
 	mes "^1E3A8A== AUTO BATTLE ==^000000";
 	mes "^0F766E" + getarg(0) + "^000000";
 	mes "^9CA3AF------------------------------------------^000000";
