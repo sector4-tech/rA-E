@@ -123,10 +123,11 @@ L_Bye:
 
 // Styled header of every screen. getarg(0) = title. Also enlarges the dialog window.
 L_Title:
+	// setdialogsize resets the text position of the client window, so it must come BEFORE the first mes
+	setdialogsize 520, 440;
 	mes "^1E3A8A== AUTO BATTLE ==^000000";
 	mes "^0F766E" + getarg(0) + "^000000";
 	mes "^9CA3AF------------------------------------------^000000";
-	setdialogsize 520, 440;
 	return;
 
 L_ItemName:
