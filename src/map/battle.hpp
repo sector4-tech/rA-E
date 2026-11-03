@@ -692,6 +692,7 @@ struct Battle_Config
 	int32 autobattle_effect_interval;
 	int32 autobattle_lang;
 	int32 autobattle_warp_return;
+	int32 autobattle_hat_effect;
 	int32 feature_petevolution;
 	int32 feature_pet_autofeed;
 	int32 feature_pet_autofeed_rate;

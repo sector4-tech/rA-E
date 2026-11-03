@@ -18,6 +18,7 @@
 #include <common/socket.hpp>
 #include <common/strlib.hpp>
 #include <common/timer.hpp>
+#include <common/utilities.hpp>
 
 #include "battle.hpp"
 #include "clif.hpp"
@@ -459,6 +460,21 @@ static bool ab_cond_ok(const s_ab_skill& sk, const mob_data& md) {
 // Start / stop
 // ---------------------------------------------------------------------------------------------
 
+/// Hat effect (stays on the character) while Auto Battle is running; the id comes from "autobattle_hat_effect"
+static void ab_hat_effect(map_session_data& sd, bool on) {
+#if PACKETVER_MAIN_NUM >= 20150507 || PACKETVER_RE_NUM >= 20150429 || defined(PACKETVER_ZERO)
+	int16 id = (int16)battle_config.autobattle_hat_effect;
+	if (id <= HAT_EF_MIN || id >= HAT_EF_MAX)
+		return;
+	if (on) {
+		if (!rathena::util::vector_exists(sd.ud.hatEffects, id))
+			sd.ud.hatEffects.push_back(id);
+		clif_hat_effect_single(sd, id, true);
+	} else if (rathena::util::vector_erase_if_exists(sd.ud.hatEffects, id))
+		clif_hat_effect_single(sd, id, false);
+#endif
+}
+
 bool autobattle_start(map_session_data& sd, bool from_item) {
 	if (!battle_config.autobattle_enable) {
 		ab_msg(sd, "Auto Battle is disabled on this server.", "\u0E40\u0E0B\u0E34\u0E23\u0E4C\u0E1F\u0E40\u0E27\u0E2D\u0E23\u0E4C\u0E19\u0E35\u0E49\u0E1B\u0E34\u0E14\u0E23\u0E30\u0E1A\u0E1A Auto Battle");
@@ -530,6 +546,7 @@ bool autobattle_start(map_session_data& sd, bool from_item) {
 	ab->timer = add_timer(gettick() + battle_config.autobattle_interval, ab_timer, sd.id, 0);
 	ab->next_effect = 0;
 	sc_start(&sd, &sd, SC_AUTOBATTLE, 100, 1, INFINITE_TICK); // status icon + marker for other players
+	ab_hat_effect(sd, true);
 	ab_msg(sd, "Auto Battle started.", "\u0E40\u0E23\u0E34\u0E48\u0E21 Auto Battle \u0E41\u0E25\u0E49\u0E27");
 	return true;
 }
@@ -555,6 +572,7 @@ static void ab_stop(map_session_data& sd, const char* en, const char* th) {
 	ab->running = false;
 	if (sd.sc.getSCE(SC_AUTOBATTLE))
 		status_change_end(&sd, SC_AUTOBATTLE);
+	ab_hat_effect(sd, false);
 	ab->target_id = 0;
 	ab->phase = ABP_HUNT;
 	if (was_running) {

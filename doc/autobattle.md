@@ -66,3 +66,23 @@ and `autobattle_effect_interval: <ms>` (0 = off). Apply with `@reloadbattleconf`
 ## Status icon order (client)
 The client sorts status icons by the priority table in `stateiconimginfo.lub`. `EFST_AUTOATTACK` is placed in
 `PRIORITY_GOLD` right after `EFST_VIPSTATUS` so the icon is shown first, after the VIP icon.
+
+## Hat effect (an effect that stays over the character, e.g. a drone floating over the head)
+`conf/battle/feature.conf`: `autobattle_hat_effect: 600` (0 = off). The effect is added when Auto Battle starts and
+removed when it stops. `600` is `HAT_EF_AUTOBATTLE` (src/map/script.hpp). The client needs an entry with the same id:
+
+1. Copy the effect folder out of the GRF into the client `data` folder, e.g. `data\texture\effect\a_machine\...`
+   (the .str file plus its images).
+2. `data\luafiles514\lua files\HatEffectInfo\HatEffectIDs.lub`: add `HAT_EF_AUTOBATTLE = 600,` (do not break the commas).
+3. `data\luafiles514\lua files\HatEffectInfo\HatEffectInfo.lub`: add inside `hatEffectTable`
+   ```lua
+   [HatEFID.HAT_EF_AUTOBATTLE] = {
+   	resourceFileName = "a_machine\\a_machine\\min_a_machine_waiting.str",
+   	hatEffectPos = -10,
+   	hatEffectPosX = 0,
+   	isAdjustPositionWhenShrinkState = true,
+   	isAdjustSizeWhenShrinkState = true
+   },
+   ```
+   `hatEffectPos` / `hatEffectPosX` move the effect up/down / sideways, adjust until it sits where you want.
+4. Restart the client, then `@reloadbattleconf` (or restart the server) and use Auto Battle.

@@ -2200,6 +2200,9 @@ enum e_hat_effects : int16{
 	FOOTPRINT_EF_FLOWER_GARDEN,
 	HAT_EF_C_ANGEL_GIFT,
 
+	/// rA-E custom: drawn over the head while Auto Battle is running (needs the client file, see doc/autobattle.md)
+	HAT_EF_AUTOBATTLE = 600,
+
 	HAT_EF_MAX
 };
 
