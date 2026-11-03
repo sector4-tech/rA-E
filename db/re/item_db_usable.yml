@@ -88680,4 +88680,5 @@ Body:
       NoMail: true
       NoAuction: true
     Script: |
-      callfunc "F_ABUI", 1;
+      // item scripts cannot keep a dialog open: open the menu from a real NPC event right after
+      addtimer 100, "AutoBattleUI::OnOpenItem";

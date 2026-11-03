@@ -27,6 +27,11 @@ OnInit:
 OnOpen:
 	callfunc "F_ABUI";
 	end;
+
+OnOpenItem:
+	// started by the Auto Battle item (see item 32500): the item itself counts as the pass
+	callfunc "F_ABUI", 1;
+	end;
 }
 
 prontera,155,181,4	script	Auto Battle Manager	4_F_KAFRA1,{
