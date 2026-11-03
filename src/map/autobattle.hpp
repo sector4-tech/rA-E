@@ -45,6 +45,7 @@ struct s_ab_skill {
 	uint16 level = 0;
 	uint8 cond = ABC_ALWAYS; ///< attack skills: e_ab_cond
 	uint8 cond_val = 0; ///< attack skills: monster HP % used by cond
+	uint8 fails = 0; ///< runtime only: consecutive failed attempts (back-off, avoids client error spam)
 	t_tick next_try = 0; ///< runtime only
 };
 

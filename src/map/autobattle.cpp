@@ -326,6 +326,40 @@ bool autobattle_running(const map_session_data& sd) {
 
 enum e_ab_skill_result { ABS_NO, ABS_USED, ABS_TOOFAR };
 
+/// Checks the requirements that would make the server send a "skill failed" message to the client
+/// (weapon, ammo, catalysts, spirit spheres, zeny, state), so that we never spam the player.
+static bool ab_skill_requirements_ok(map_session_data& sd, uint16 id, uint16 lv) {
+	s_skill_condition req = skill_get_requirement(&sd, id, lv);
+
+	if (req.sp > 0 && (int32)sd.battle_status.sp < req.sp)
+		return false;
+	if (req.hp > 0 && (int32)sd.battle_status.hp <= req.hp)
+		return false;
+	if (req.zeny > 0 && sd.status.zeny < (uint32)req.zeny)
+		return false;
+	if (req.spiritball > 0 && sd.spiritball < req.spiritball)
+		return false;
+	if (req.weapon && !(req.weapon & (1 << sd.status.weapon)))
+		return false;
+	if (req.ammo) {
+		int16 idx = sd.equip_index[EQI_AMMO];
+		if (idx < 0 || !sd.inventory_data[idx] || !(req.ammo & (1 << sd.inventory_data[idx]->subtype))
+			|| sd.inventory.u.items_inventory[idx].amount < req.ammo_qty)
+			return false;
+	}
+	for (int32 i = 0; i < MAX_SKILL_ITEM_REQUIRE; i++)
+		if (req.itemid[i] && ab_item_count(sd, req.itemid[i]) < req.amount[i])
+			return false;
+	switch (req.state) {
+		case ST_CART: if (!pc_iscarton(&sd)) return false; break;
+		case ST_FALCON: if (!pc_isfalcon(&sd)) return false; break;
+		case ST_RIDING: if (!pc_isriding(&sd)) return false; break;
+		case ST_SHIELD: if (sd.status.shield <= 0) return false; break;
+		default: break;
+	}
+	return true;
+}
+
 /// Tries to use one configured skill. 'target' may be nullptr for self skills.
 static e_ab_skill_result ab_use_skill(map_session_data& sd, s_ab_skill& sk, block_list* target, t_tick tick, int32* need_range = nullptr) {
 	if (!sk.skill_id || DIFF_TICK(sk.next_try, tick) > 0)
@@ -342,8 +376,10 @@ static e_ab_skill_result ab_use_skill(map_session_data& sd, s_ab_skill& sk, bloc
 	}
 	if (sd.scd.find(id) != sd.scd.end())
 		return ABS_NO; // cooldown running
-	if ((int32)sd.battle_status.sp < skill_get_sp(id, lv) || (int32)sd.battle_status.hp <= skill_get_hp(id, lv))
+	if (!ab_skill_requirements_ok(sd, id, lv)) {
+		sk.next_try = tick + 1000; // wait for SP / ammo / catalyst; stays silent
 		return ABS_NO;
+	}
 
 	int32 inf = skill_get_inf(id);
 	int32 result = 0;
@@ -388,9 +424,13 @@ static e_ab_skill_result ab_use_skill(map_session_data& sd, s_ab_skill& sk, bloc
 	}
 
 	if (!result) {
-		sk.next_try = tick + 1500; // something blocked it (items, weapon, status...)
+		// Something blocked it (status, map restriction...). Back off: 1.5s, 3s, 6s ... up to 48s
+		if (sk.fails < 250)
+			sk.fails++;
+		sk.next_try = tick + (1500 << std::min<int32>(sk.fails - 1, 5));
 		return ABS_NO;
 	}
+	sk.fails = 0;
 	// Don't spam skills faster than once per 300ms
 	sk.next_try = tick + 300;
 	return ABS_USED;
@@ -422,6 +462,10 @@ static bool ab_cond_ok(const s_ab_skill& sk, const mob_data& md) {
 bool autobattle_start(map_session_data& sd, bool from_item) {
 	if (!battle_config.autobattle_enable) {
 		ab_msg(sd, "Auto Battle is disabled on this server.", "\u0E40\u0E0B\u0E34\u0E23\u0E4C\u0E1F\u0E40\u0E27\u0E2D\u0E23\u0E4C\u0E19\u0E35\u0E49\u0E1B\u0E34\u0E14\u0E23\u0E30\u0E1A\u0E1A Auto Battle");
+		return false;
+	}
+	if (sd.sc.getSCE(SC_JAILED)) {
+		ab_msg(sd, "Auto Battle cannot be used in jail.", "\u0E44\u0E21\u0E48\u0E2D\u0E19\u0E38\u0E0D\u0E32\u0E15\u0E43\u0E2B\u0E49\u0E43\u0E0A\u0E49 Auto Battle \u0E02\u0E13\u0E30\u0E16\u0E39\u0E01\u0E02\u0E31\u0E07");
 		return false;
 	}
 	if (pc_isdead(&sd)) {
@@ -919,6 +963,31 @@ static bool ab_loot(map_session_data& sd, s_autobattle& ab, t_tick tick) {
 // Restock
 // ---------------------------------------------------------------------------------------------
 
+/// Lowest price (after discount skills) at which a normal zeny NPC shop sells the item, 0 = not sold anywhere.
+/// Restock only buys what a real shop sells, so it can never be used to get items out of the item DB for free-ish.
+static int32 ab_shop_price(map_session_data& sd, t_itemid nameid) {
+	int64 best = 0;
+	for (int32 m = 0; m < map_num; m++) {
+		map_data* mapdata = map_getmapdata(m);
+		if (!mapdata)
+			continue;
+		for (int32 i = 0; i < mapdata->npc_num; i++) {
+			npc_data* nd = mapdata->npc[i];
+			if (!nd || nd->subtype != NPCTYPE_SHOP || !nd->u.shop.shop_item)
+				continue;
+			for (int32 j = 0; j < nd->u.shop.count; j++) {
+				const npc_item_list& li = nd->u.shop.shop_item[j];
+				if (li.nameid != nameid || li.value == 0)
+					continue;
+				int64 price = nd->u.shop.discount ? pc_modifybuyvalue(&sd, li.value) : li.value;
+				if (price > 0 && (best == 0 || price < best))
+					best = price;
+			}
+		}
+	}
+	return (int32)std::min<int64>(best, INT32_MAX);
+}
+
 static bool ab_need_restock(map_session_data& sd, s_autobattle& ab) {
 	if (!ab.restock)
 		return false;
@@ -934,9 +1003,11 @@ static int32 ab_buy_items(map_session_data& sd, s_autobattle& ab) {
 	for (const auto& r : ab.restock_items) {
 		int32 need = (int32)r.amount - ab_item_count(sd, r.nameid);
 		auto id = item_db.find(r.nameid);
-		if (need <= 0 || !id || id->value_buy == 0 || !id->isStackable())
+		if (need <= 0 || !id || !id->isStackable())
 			continue;
-		int32 price = std::max(1, pc_modifybuyvalue(&sd, id->value_buy));
+		int32 price = ab_shop_price(sd, r.nameid);
+		if (price <= 0)
+			continue; // not sold by any NPC shop
 		int64 by_zeny = sd.status.zeny / price;
 		int64 by_weight = id->weight ? ((int64)sd.max_weight - sd.weight) / id->weight : need;
 		int32 n = (int32)std::min<int64>({ (int64)need, by_zeny, by_weight, (int64)MAX_AMOUNT });
@@ -1019,7 +1090,7 @@ static void ab_combat(map_session_data& sd, s_autobattle& ab, mob_data& target, 
 	}
 
 	if (ab.normal_attack) {
-		if (sd.ud.target != target.id || sd.ud.attacktimer == INVALID_TIMER)
+		if (sd.ud.target != target.id || (sd.ud.attacktimer == INVALID_TIMER && !unit_is_walking(&sd)))
 			unit_attack(&sd, target.id, 1);
 	} else if (need_range > 0 && !unit_is_walking(&sd)) {
 		// skills only: close in until the skill is in range
@@ -1054,8 +1125,14 @@ static void ab_tick(map_session_data& sd, s_autobattle& ab, t_tick tick) {
 			clif_specialeffect(&sd, battle_config.autobattle_effect, AREA);
 		}
 	}
-	if (sd.prev == nullptr || sd.state.warping || sd.state.changemap || sd.npc_id || sd.state.workinprogress)
-		return; // busy (loading map / NPC dialogue / etc.)
+	if (sd.sc.getSCE(SC_JAILED)) {
+		ab_stop(sd, "Auto Battle cannot be used in jail.", "\u0E44\u0E21\u0E48\u0E2D\u0E19\u0E38\u0E0D\u0E32\u0E15\u0E43\u0E2B\u0E49\u0E43\u0E0A\u0E49 Auto Battle \u0E02\u0E13\u0E30\u0E16\u0E39\u0E01\u0E02\u0E31\u0E07");
+		return;
+	}
+	if (sd.prev == nullptr || sd.state.warping || sd.state.changemap || sd.npc_id || sd.state.workinprogress
+		|| sd.state.trading || sd.state.storage_flag || sd.state.prevend || sd.npc_shopid || sd.state.refineui_open
+		|| sd.state.barter_open || sd.state.barter_extended_open || sd.state.roulette_open || sd.state.stylist_open)
+		return; // busy (loading map / NPC dialogue / trade / storage...)
 	if (map_flag_vs(sd.m)) {
 		ab_stop(sd, "this map does not allow Auto Battle.", "\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E19\u0E35\u0E49\u0E44\u0E21\u0E48\u0E2D\u0E19\u0E38\u0E0D\u0E32\u0E15\u0E43\u0E2B\u0E49\u0E43\u0E0A\u0E49 Auto Battle");
 		return;

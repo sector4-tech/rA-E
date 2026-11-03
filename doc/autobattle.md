@@ -5,7 +5,8 @@ Config: `conf/battle/feature.conf` (`autobattle_*`).
 
 ## Starting / stopping (item based)
 * Use the **Auto Battle Pass** (`Auto_Battle_Pass`, id 32500, not consumed) to start or stop Auto Battle.
-  The item runs the script command `autobattle 2;` (0 = stop, 1 = start, 2 = toggle).
+  Using the item opens the setup menu directly (`callfunc "F_ABUI", 1;`); start / stop is a button inside the menu.
+  The script command `autobattle {0|1|2};` (stop / start / toggle) still exists.
 * While active the character has the status `SC_AUTOBATTLE` (icon `EFST_AUTOATTACK` = 1741, client file `EFST_AI_AUTOATTACK.tga`, shown to nearby
   players) and a periodic effect is played around the character so other players can tell
   Auto Battle from manual play. Settings: `autobattle_item_only`, `autobattle_effect`,
@@ -57,3 +58,11 @@ written with `pc_setregistry`, so they are saved to the `char_reg_num` table and
 ## Client UI
 The window shown in newer clients is not part of Ragexe 2026-01-06/07. A DLL / client patch can
 reuse the same commands or variables; see the packet notes in the discussion.
+
+## Changing the effect shown to other players
+`conf/battle/feature.conf`: `autobattle_effect: <EF_ id>` (see `doc/effect_list.md`, default 76 = EF_MAGNIFICAT)
+and `autobattle_effect_interval: <ms>` (0 = off). Apply with `@reloadbattleconf`, no restart needed.
+
+## Status icon order (client)
+The client sorts status icons by the priority table in `stateiconimginfo.lub`. `EFST_AUTOATTACK` is placed in
+`PRIORITY_GOLD` right after `EFST_VIPSTATUS` so the icon is shown first, after the VIP icon.
