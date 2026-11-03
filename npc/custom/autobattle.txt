@@ -260,28 +260,14 @@ L_PickItem:
 				return .@s$;
 			continue;
 		}
-		getinventorylist;
+		// the list is built by the server (a script loop over the whole inventory hits the loop limit)
+		autobattlecmd("items " + .@mode);
+		.@n = autobattleinfo("itn");
 		deletearray @abm$[0], getarraysize(@abm$);
 		deletearray @abid[0], getarraysize(@abid);
-		.@n = 0;
-		for (.@i = 0; .@i < @inventorylist_count && .@n < 200; .@i++) {
-			.@id = @inventorylist_id[.@i];
-			.@t = getiteminfo(.@id, ITEMINFO_TYPE);
-			if (.@mode == 0 && .@t != IT_HEALING)
-				continue;
-			if (.@mode == 1 && .@t != IT_HEALING && .@t != IT_USABLE)
-				continue;
-			if (.@mode == 2 && (.@t == IT_WEAPON || .@t == IT_ARMOR))
-				continue;
-			.@dup = 0;
-			for (.@j = 0; .@j < .@n; .@j++)
-				if (@abid[.@j] == .@id)
-					.@dup = 1;
-			if (.@dup)
-				continue;
-			@abid[.@n] = .@id;
-			@abm$[.@n] = getitemname(.@id) + " (" + countitem(.@id) + ")";
-			.@n++;
+		for (.@i = 0; .@i < .@n; .@i++) {
+			@abid[.@i] = autobattleinfo("itid", .@i);
+			@abm$[.@i] = autobattlestr("itname", .@i) + " (" + autobattleinfo("itcnt", .@i) + ")";
 		}
 		@abmn = .@n;
 		if (!.@n) {

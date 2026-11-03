@@ -95,6 +95,7 @@ struct s_autobattle {
 	// lists prepared for the setup dialog (autobattleinfo "skills" / "mapmobs")
 	std::vector<std::pair<uint16, uint16>> cache_skills; ///< skill id, learned level
 	std::vector<std::pair<uint16, int32>> cache_mobs; ///< mob id, count on the map
+	std::vector<std::pair<t_itemid, int32>> cache_items; ///< item id, amount (inventory picker of the setup dialog)
 
 	// ---- Hunt ----
 	bool all_monsters = true;

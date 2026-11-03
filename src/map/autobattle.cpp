@@ -1303,6 +1303,39 @@ void autobattle_list_map_mobs(map_session_data& sd) {
 		ab_msg(sd, "  (no monsters on this map)", "  (\u0E44\u0E21\u0E48\u0E21\u0E35\u0E21\u0E2D\u0E19\u0E2A\u0E40\u0E15\u0E2D\u0E23\u0E4C\u0E43\u0E19\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E19\u0E35\u0E49)");
 }
 
+/// Inventory items for the item picker of the setup dialog (done here because a script loop over a big inventory
+/// hits the script engine's loop limit). mode: 0 = healing items, 1 = healing + usable, 2 = everything except weapons / armor.
+static void ab_list_items(map_session_data& sd, s_autobattle& ab, int32 mode) {
+	ab.cache_items.clear();
+	std::map<t_itemid, int32> total;
+	std::vector<t_itemid> order;
+	for (int32 i = 0; i < MAX_INVENTORY; i++) {
+		const item& it = sd.inventory.u.items_inventory[i];
+		if (!it.nameid || it.amount <= 0 || it.equip)
+			continue;
+		auto data = item_db.find(it.nameid);
+		if (!data)
+			continue;
+		bool ok;
+		if (mode == 0)
+			ok = data->type == IT_HEALING;
+		else if (mode == 1)
+			ok = data->type == IT_HEALING || data->type == IT_USABLE;
+		else
+			ok = data->type != IT_WEAPON && data->type != IT_ARMOR;
+		if (!ok)
+			continue;
+		if (total.find(it.nameid) == total.end())
+			order.push_back(it.nameid);
+		total[it.nameid] += it.amount;
+	}
+	for (t_itemid id : order) {
+		if (ab.cache_items.size() >= 200)
+			break;
+		ab.cache_items.emplace_back(id, total[id]);
+	}
+}
+
 /// kind: "attack" / "buff" / "support"
 static void ab_list_skills(map_session_data& sd, s_autobattle& ab, const std::string& kind) {
 	ab.cache_skills.clear();
@@ -1469,6 +1502,9 @@ int64 autobattle_info(map_session_data& sd, const char* key, int32 a, int32 b) {
 	if (k == "skn") return ab->cache_skills.size();
 	if (k == "skid") return (a >= 0 && a < (int32)ab->cache_skills.size()) ? ab->cache_skills[a].first : 0;
 	if (k == "sklv") return (a >= 0 && a < (int32)ab->cache_skills.size()) ? ab->cache_skills[a].second : 0;
+	if (k == "itn") return ab->cache_items.size();
+	if (k == "itid") return (a >= 0 && a < (int32)ab->cache_items.size()) ? ab->cache_items[a].first : 0;
+	if (k == "itcnt") return (a >= 0 && a < (int32)ab->cache_items.size()) ? ab->cache_items[a].second : 0;
 	if (k == "mmn") return ab->cache_mobs.size();
 	if (k == "mmid") return (a >= 0 && a < (int32)ab->cache_mobs.size()) ? ab->cache_mobs[a].first : 0;
 	if (k == "mmcnt") return (a >= 0 && a < (int32)ab->cache_mobs.size()) ? ab->cache_mobs[a].second : 0;
@@ -1490,6 +1526,7 @@ std::string autobattle_str(map_session_data& sd, const char* key, int32 a) {
 	if (k == "buff") return (a >= 0 && a < AB_MAX_BUFF_SLOTS) ? name(ab->buffs[a].skill_id) : "";
 	if (k == "sup") return (a >= 0 && a < AB_MAX_SUPPORT_SLOTS) ? name(ab->support[a].skill_id) : "";
 	if (k == "skname") return (a >= 0 && a < (int32)ab->cache_skills.size()) ? name(ab->cache_skills[a].first) : "";
+	if (k == "itname") return (a >= 0 && a < (int32)ab->cache_items.size()) ? ab_item_name(ab->cache_items[a].first) : "";
 	if (k == "mmname") return (a >= 0 && a < (int32)ab->cache_mobs.size()) ? ab_mob_name(ab->cache_mobs[a].first) : "";
 	return "";
 }
@@ -1671,6 +1708,7 @@ bool autobattle_command(map_session_data& sd, const char* message, bool quiet) {
 		ab_msg(sd, "All Auto Battle settings were reset.", "\u0E23\u0E35\u0E40\u0E0B\u0E47\u0E15\u0E01\u0E32\u0E23\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32 Auto Battle \u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14\u0E41\u0E25\u0E49\u0E27");
 	}
 	else if (c == "skills") { ab_list_skills(sd, *ab, arg(1)); changed = false; }
+	else if (c == "items") { ab_list_items(sd, *ab, atoi(arg(1).c_str())); changed = false; }
 	else if (c == "mapmobs") { autobattle_list_map_mobs(sd); changed = false; }
 	else if (c == "mobs") { ab_quiet = false; autobattle_list_map_mobs(sd); changed = false; }
 	else if (c == "all" && ab_parse_onoff(arg(1), b)) ab->all_monsters = b;
