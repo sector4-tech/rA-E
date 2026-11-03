@@ -88680,4 +88680,4 @@ Body:
       NoMail: true
       NoAuction: true
     Script: |
-      doevent "AutoBattleUI::OnOpen";
+      callfunc "F_ABUI", 1;

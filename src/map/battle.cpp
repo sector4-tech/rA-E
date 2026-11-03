@@ -8802,6 +8802,8 @@ static const struct _battle_data {
 	{ "autobattle_item_only",               &battle_config.autobattle_item_only,            1,      0,      1,              },
 	{ "autobattle_effect",                  &battle_config.autobattle_effect,               76,     0,      INT_MAX,        },
 	{ "autobattle_effect_interval",         &battle_config.autobattle_effect_interval,      3000,   0,      60000,          },
+	{ "autobattle_lang",                    &battle_config.autobattle_lang,                 1,      0,      1,              },
+	{ "autobattle_warp_return",             &battle_config.autobattle_warp_return,          1,      0,      1,              },
 	{ "feature.petevolution",               &battle_config.feature_petevolution,            1,      0,      1,              },
 	{ "feature.petautofeed",                &battle_config.feature_pet_autofeed,            1,      0,      1,              },
 	{ "feature.pet_autofeed_rate",          &battle_config.feature_pet_autofeed_rate,      89,      0,    100,              },

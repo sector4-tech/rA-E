@@ -15797,10 +15797,45 @@ BUILDIN_FUNC(autobattle) {
 	if (!script_rid2sd(sd))
 		return SCRIPT_CMD_FAILURE;
 
-	// ดึงค่า op หากไม่มีการระบุจาก NPC Script ให้ใช้ค่า Default เป็น 2 (Toggle)
-	int32 op = script_hasdata(st, 2) ? script_getnum(st, 2) : 2;
-	autobattle_script(*sd, op);
+	autobattle_script(*sd, script_hasdata(st, 2) ? script_getnum(st, 2) : 2);
+	return SCRIPT_CMD_SUCCESS;
+}
 
+/// autobattleinfo("<key>"{,<a>{,<b>}});
+/// Returns a value of the Auto Battle settings of the attached player (see doc/autobattle.md).
+BUILDIN_FUNC(autobattleinfo) {
+	map_session_data* sd;
+
+	if (!script_rid2sd(sd))
+		return SCRIPT_CMD_FAILURE;
+
+	script_pushint(st, autobattle_info(*sd, script_getstr(st, 2), script_hasdata(st, 3) ? script_getnum(st, 3) : 0,
+		script_hasdata(st, 4) ? script_getnum(st, 4) : 0));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/// autobattlestr("<key>"{,<a>});
+/// Returns a text (skill / item / monster name...) for the Auto Battle dialog.
+BUILDIN_FUNC(autobattlestr) {
+	map_session_data* sd;
+
+	if (!script_rid2sd(sd))
+		return SCRIPT_CMD_FAILURE;
+
+	std::string v = autobattle_str(*sd, script_getstr(st, 2), script_hasdata(st, 3) ? script_getnum(st, 3) : 0);
+	script_pushstrcopy(st, v.c_str());
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/// autobattlecmd("<@autobattle arguments>");
+/// Runs an @autobattle command quietly for the attached player. Returns 1 on success.
+BUILDIN_FUNC(autobattlecmd) {
+	map_session_data* sd;
+
+	if (!script_rid2sd(sd))
+		return SCRIPT_CMD_FAILURE;
+
+	script_pushint(st, autobattle_command(*sd, script_getstr(st, 2), true) ? 1 : 0);
 	return SCRIPT_CMD_SUCCESS;
 }
 
@@ -28229,6 +28264,9 @@ struct script_function buildin_func[] = {
 	BUILDIN_DEF(mapwarp,"ssii??"),		// Added by RoVeRT
 	BUILDIN_DEF(atcommand,"s"), // [MouseJstr]
 	BUILDIN_DEF(autobattle,"?"),
+	BUILDIN_DEF(autobattleinfo,"s??"),
+	BUILDIN_DEF(autobattlestr,"s?"),
+	BUILDIN_DEF(autobattlecmd,"s"),
 	BUILDIN_DEF2(atcommand,"charcommand","s"), // [MouseJstr]
 	BUILDIN_DEF(movenpc,"sii?"), // [MouseJstr]
 	BUILDIN_DEF(message,"ss"), // [MouseJstr]

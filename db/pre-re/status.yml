@@ -6907,7 +6907,7 @@ Body:
       NoClearance: true
       NoSave: true
   - Status: Autobattle
-    Icon: EFST_AUTOBERSERK
+    Icon: EFST_AUTOATTACK
     Flags:
       BlEffect: true
       NoSave: true

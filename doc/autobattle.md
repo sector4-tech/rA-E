@@ -6,7 +6,7 @@ Config: `conf/battle/feature.conf` (`autobattle_*`).
 ## Starting / stopping (item based)
 * Use the **Auto Battle Pass** (`Auto_Battle_Pass`, id 32500, not consumed) to start or stop Auto Battle.
   The item runs the script command `autobattle 2;` (0 = stop, 1 = start, 2 = toggle).
-* While active the character has the status `SC_AUTOBATTLE` (icon `EFST_AUTOBERSERK`, shown to nearby
+* While active the character has the status `SC_AUTOBATTLE` (icon `EFST_AUTOATTACK` = 1741, client file `EFST_AI_AUTOATTACK.tga`, shown to nearby
   players) and a periodic effect is played around the character so other players can tell
   Auto Battle from manual play. Settings: `autobattle_item_only`, `autobattle_effect`,
   `autobattle_effect_interval` in `conf/battle/feature.conf`.
@@ -15,32 +15,44 @@ Config: `conf/battle/feature.conf` (`autobattle_*`).
   and status are in `db/re` and `db/pre-re` (`item_db_usable.yml`, `status.yml`).
 
 ## Setup dialog (no client changes needed)
-* `@ab menu` opens the dialog anywhere, or talk to **Auto Battle Manager** (prontera,155,181).
+* Type `@ab` (no arguments) to open the Thai setup dialog anywhere, or talk to **Auto Battle Manager**
+  (prontera,155,181). `@ab help` lists the chat commands.
 * The dialog is `npc/custom/autobattle.txt` (enabled in `npc/scripts_custom.conf`).
-* It only uses `@ab -q ...` commands (`-q` = quiet) and reads the character variables `ab_*`.
+  **Save that file as TIS-620 / cp874.**
+* The dialog never touches variables directly. It uses three script commands:
+  * `autobattleinfo("<key>"{,<a>{,<b>}})` - read a setting (numbers).
+  * `autobattlestr("<key>"{,<a>})` - read a name (skill / item / monster / map).
+  * `autobattlecmd("<@ab arguments>")` - change a setting, same syntax as `@ab` (returns 1 on success).
+* Chat messages are Thai (TIS-620) by default: `autobattle_lang: 1` (0 = English) in `conf/battle/feature.conf`.
 
 ## Commands
 ```
-start | stop | toggle | status | mobs | menu | sync | skills <attack|buff|support>
+(no argument) | menu | start | stop | toggle | status | mobs | reset | skills <attack|buff|support> | mapmobs
 all <on|off> | attack <on|off> | fightback <on|off>
-mob +<id|name> / -<id|name> / reset
-skill <slot 1-16> <skill id|name> [lv] | skill clear <slot|all>
-hp|sp <item id|name|off> [%]
-buff <slot 1-8> <skill> [lv] | buff clear <slot|all>
+mob +<id|name> / -<id|name> / reset            blacklist +<id|name> / -<id|name> / reset
+skill <slot 1-16> <skill id|name> [lv] | skill clear <slot|all> | skill cond <slot> <always|above|below> [%]
+hp|sp <item id|name|off> [%] | pct <hp|sp> <%> | sit <on|off> | sit hp|sp <sit%> <stand%>
+buff <slot 1-8> <skill> [lv] | buff clear <slot|all> | buffitem <slot 1-6> <item> [seconds] | buffitem clear <slot|all>
 support <slot 1-4> <skill> [lv] | support clear <slot|all> | support hp <%>
 loot <on|off> | loot range <1-14> | loot +<item> / -<item> / reset
 restock <on|off> | restock +<item> <amount> / -<item> / reset | restock min <n>
-safety hp <%> | safety item <item|off> | safety player <on|off>
-safety weight <on|off> [%] | safety noitem <on|off> | safety idle <sec>
+safety hp <%> | safety item <item|off> | safety player <on|off> | safety weight <on|off> [%]
+safety weightwarp <on|off> | safety noitem <on|off> | safety idle <sec> | safety mvp <on|off> | safety mini <on|off>
 ```
 Item/monster/skill names: use the id or the Aegis name (underscores instead of spaces).
 
-## Character variables (read by the dialog, written by the server)
-`ab_flags` (1 all, 2 normal attack, 4 fight back, 8 loot, 16 restock, 32 stop on player,
-64 stop on weight, 128 stop on no item), `ab_hpitem`, `ab_spitem`, `ab_fleeitem`, `ab_pct1`, `ab_pct2`,
-`ab_misc`, `ab_atk[16]`, `ab_buff[8]`, `ab_sup[4]` (skill id << 16 | level), `ab_mob[20]`, `ab_loot[30]`,
-`ab_rsid[8]` / `ab_rsamt[8]`. Temporary: `@ab_running`, `@ab_mobn`, `@ab_mobid[]`, `@ab_mobcnt[]`,
-`@ab_skn`, `@ab_skid[]`, `@ab_sklv[]`, `@ab_skname$[]`, `@ab_atkn$[]`, `@ab_buffn$[]`, `@ab_supn$[]`.
+## Features
+* Skill conditions: an attack skill can require the target monster to have more / less than N % HP.
+* Blacklist: monsters that are never attacked unless they attack the player.
+* Sit rest: sits down to regenerate when HP/SP are low and nothing attacks, stands up when restored.
+* Buff items: consumables (concentration potion...) re-used every N seconds.
+* Safety: flee item on low HP, stop when a player is near, overweight (stop or warp to the save point),
+  flee from MVP / mini boss, idle timeout.
+
+## Saved data
+Settings are stored in permanent character variables (`ab_flags`, `ab_pct1..3`, `ab_atk[]`, `ab_atkc[]`,
+`ab_buff[]`, `ab_sup[]`, `ab_mob[]`, `ab_bl[]`, `ab_loot[]`, `ab_rsid[]`, `ab_rsamt[]`, `ab_bi[]`, `ab_biv[]`...)
+written with `pc_setregistry`, so they are saved to the `char_reg_num` table and survive relogging.
 
 ## Client UI
 The window shown in newer clients is not part of Ragexe 2026-01-06/07. A DLL / client patch can

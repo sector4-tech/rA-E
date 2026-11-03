@@ -3489,6 +3489,8 @@
 	export_constant(EFST_PARTYEXP_LV3);
 	export_constant(EFST_PARTYEXP_LV4);
 	export_constant(EFST_PARTYEXP_LV5);
+	export_constant(EFST_AUTOATTACK);
+
 	export_constant(EFST_MAX);
 
 	/* elements */

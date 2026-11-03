@@ -2966,6 +2966,9 @@ enum efst_type : int16{
 	EFST_PARTYEXP_LV3,			// 1703
 	EFST_PARTYEXP_LV4,			// 1704
 	EFST_PARTYEXP_LV5,			// 1705
+
+	EFST_AUTOATTACK = 1741, ///< client icon EFST_AI_AUTOATTACK.tga (used by Auto Battle)
+
 	EFST_MAX,
 };
 
