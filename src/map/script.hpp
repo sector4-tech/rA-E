@@ -2203,8 +2203,8 @@ enum e_hat_effects : int16{
 	/// rA-E custom: drawn over the head while Auto Battle is running (needs the client file, see doc/autobattle.md)
 	HAT_EF_AUTOBATTLE = 600,
 
-	/// rA-E custom: ids 500..527 (spirit), 600 (auto battle), 1000..3999 (aura/vip/rank) are all valid, see doc/hat_effect_catalog.txt
-	HAT_EF_MAX = 8000
+	/// rA-E custom: ids 500..527 (spirit), 600 (auto battle), 1000..7999 (aura/vip/rank/skill effects) are all valid, see doc/hat_effect_catalog.txt
+	HAT_EF_MAX = 12000
 };
 
 enum e_convertpcinfo_type : uint8 {
