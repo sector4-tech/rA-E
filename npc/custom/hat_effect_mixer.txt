@@ -1,0 +1,310 @@
+//===== rAthena Script =======================================
+//= Hat Effect Mixer (Thai) - rA-E custom
+//===== Description: =========================================
+//= GM tool to combine several hat effects on yourself, tune the set, save it as a named group
+//= and print it in the format used by npc/custom/race_system.txt (F_RaceData field 3).
+//= Command:  @hfxmix
+//= Uses the effect list of HatFxViewer (npc/custom/hat_effect_viewer.txt). Saved as TIS-620 / cp874.
+//= Groups are stored in server variables $hfxg_nm$[] / $hfxg_ids$[]; "bad position" marks in $hfx_bad[].
+//============================================================
+
+function	script	F_HfxIdx	{
+	// effect id -> index in the viewer list (-1 if not registered)
+	.@lo = 0;
+	.@hi = getvariableofnpc(.fx_n, "HatFxViewer") - 1;
+	while (.@lo <= .@hi) {
+		.@mid = (.@lo + .@hi) / 2;
+		.@v = getelementofarray(getvariableofnpc(.fx_id, "HatFxViewer"), .@mid);
+		if (.@v == getarg(0)) return .@mid;
+		if (.@v < getarg(0)) .@lo = .@mid + 1;
+		else .@hi = .@mid - 1;
+	}
+	return -1;
+}
+
+function	script	F_HfxName	{
+	// effect id -> constant name (without HAT_EF_)
+	.@i = callfunc("F_HfxIdx", getarg(0));
+	if (.@i < 0) return "?" + getarg(0);
+	return getelementofarray(getvariableofnpc(.fx_nm$, "HatFxViewer"), .@i);
+}
+
+function	script	F_HfxApply	{
+	// turn off what the mixer showed before, then show the current set
+	.@n = getarraysize(@mx_on);
+	for (.@i = 0; .@i < .@n; .@i++)
+		if (@mx_on[.@i]) hateffect @mx_on[.@i], 0;
+	deletearray @mx_on;
+	.@m = getarraysize(@mx_id);
+	for (.@i = 0; .@i < .@m; .@i++) {
+		if (@mx_id[.@i]) {
+			hateffect @mx_id[.@i], 1;
+			@mx_on[.@i] = @mx_id[.@i];
+		}
+	}
+	return;
+}
+
+-	script	HatFxMixer	-1,{
+	end;
+
+OnInit:
+	.min_group = 99;
+	.max = 12;
+	bindatcmd "hfxmix", "HatFxMixer::OnCmd";
+	end;
+
+OnCmd:
+	if (getgroupid() < .min_group) {
+		dispbottom "ไม่มีสิทธิ์ใช้งาน";
+		end;
+	}
+	while (1) {
+		.@m = getarraysize(@mx_id);
+		if (.@m == 1 && @mx_id[0] == 0) .@m = 0;
+		mes " ";
+		clear;
+		setdialogsize 620, 440;
+		setdialogalign DIALOG_ALIGN_LEFT;
+		mes "^7E22CE== HAT EFFECT MIXER ==^000000";
+		mes "ชุดที่กำลังใช้งาน (" + .@m + " / " + .max + ")  ลำดับ = ลำดับที่เผ่าจะเปิดตามดาว";
+		if (!.@m) mes "  (ว่าง)";
+		for (.@i = 0; .@i < .@m; .@i++)
+			mes "  " + (.@i + 1) + ". ^1E3A8A" + @mx_id[.@i] + "^000000  ^0F766E" + callfunc("F_HfxName", @mx_id[.@i]) + "^000000";
+		.@s = select("เรียกดูและเพิ่มเอฟเฟกต์ (พรีวิวสด)", "เพิ่มจากรหัส", "ลบรายการออกจากชุด", "สลับลำดับ", "ล้างชุดทั้งหมด", "บันทึกเป็นกลุ่ม", "โหลดกลุ่ม", "ลบกลุ่ม", "แสดงโค้ดสำหรับเผ่า (race_system)", "รายการที่ทำเครื่องหมายว่าตำแหน่งเพี้ยน", "ปิดเอฟเฟกต์ทั้งหมดแล้วออก", "ออก (คงเอฟเฟกต์ไว้)");
+		switch (.@s) {
+		case 1:
+			if (.@m >= .max) {
+				mes " ";
+				clear;
+				mes "ชุดเต็มแล้ว (" + .max + ") ลบก่อนจึงจะเพิ่มได้";
+				next;
+				break;
+			}
+			.@c = 0;
+			while (1) {
+				.@cid = getelementofarray(getvariableofnpc(.fx_id, "HatFxViewer"), .@c);
+				.@in = (inarray(@mx_id, .@cid) >= 0);
+				if (!.@in) hateffect .@cid, 1;
+				mes " ";
+				clear;
+				mes "^7E22CE== เรียกดู (แสดงทับชุดปัจจุบัน) ==^000000";
+				mes "ลำดับ " + (.@c + 1) + " / " + getvariableofnpc(.fx_n, "HatFxViewer") + (.@in ? "  ^B91C1C(อยู่ในชุดแล้ว)^000000" : "");
+				mes "รหัส: ^1E3A8A" + .@cid + "^000000";
+				mes "ชื่อ: ^0F766E" + getelementofarray(getvariableofnpc(.fx_nm$, "HatFxViewer"), .@c) + "^000000";
+				.@b = select("เพิ่มตัวนี้เข้าชุด", "ถัดไป (+1)", "ก่อนหน้า (-1)", "ข้าม +10", "ย้อน -10", "ข้าม +100", "ย้อน -100", "ค้นหาจากชื่อ", "ไปที่รหัส", "ทำเครื่องหมายว่าตำแหน่งเพี้ยน", "กลับ");
+				if (!.@in) hateffect .@cid, 0;
+				.@n = getvariableofnpc(.fx_n, "HatFxViewer");
+				switch (.@b) {
+				case 1:
+					if (!.@in) {
+						if (.@m == 1 && @mx_id[0] == 0) deletearray @mx_id;
+						@mx_id[getarraysize(@mx_id)] = .@cid;
+						callfunc "F_HfxApply";
+						.@m = getarraysize(@mx_id);
+						if (.@m >= .max) .@b = 11;
+					}
+					break;
+				case 2: .@c += 1; break;
+				case 3: .@c -= 1; break;
+				case 4: .@c += 10; break;
+				case 5: .@c -= 10; break;
+				case 6: .@c += 100; break;
+				case 7: .@c -= 100; break;
+				case 8:
+					mes " ";
+					clear;
+					mes "พิมพ์ส่วนของชื่อ (ภาษาอังกฤษ เช่น DRAGON, ANGEL, FIRE)";
+					input .@q$;
+					.@q$ = strtoupper(.@q$);
+					.@f = -1;
+					for (.@k = 1; .@k <= .@n; .@k++) {
+						.@j = (.@c + .@k) % .@n;
+						if (compare(getelementofarray(getvariableofnpc(.fx_nm$, "HatFxViewer"), .@j), .@q$)) {
+							.@f = .@j;
+							break;
+						}
+					}
+					if (.@f < 0) {
+						mes " ";
+						clear;
+						mes "ไม่พบชื่อที่มีคำว่า " + .@q$;
+						next;
+					} else
+						.@c = .@f;
+					break;
+				case 9:
+					mes " ";
+					clear;
+					mes "พิมพ์รหัสเอฟเฟกต์ (จะข้ามไปรหัสที่ใกล้ที่สุดในรายการ)";
+					input .@want, 0, 12000;
+					.@c = 0;
+					while (.@c < .@n - 1 && getelementofarray(getvariableofnpc(.fx_id, "HatFxViewer"), .@c) < .@want)
+						.@c++;
+					break;
+				case 10:
+					if (inarray($hfx_bad, .@cid) < 0) $hfx_bad[getarraysize($hfx_bad)] = .@cid;
+					dispbottom "ทำเครื่องหมายรหัส " + .@cid + " ว่าตำแหน่งเพี้ยนแล้ว";
+					break;
+				default:
+					break;
+				}
+				if (.@b == 11) break;
+				if (.@c < 0) .@c += .@n;
+				if (.@c >= .@n) .@c -= .@n;
+				if (.@c < 0) .@c = 0;
+			}
+			break;
+		case 2:
+			if (.@m >= .max) {
+				mes " ";
+				clear;
+				mes "ชุดเต็มแล้ว";
+				next;
+				break;
+			}
+			mes " ";
+			clear;
+			mes "พิมพ์รหัสเอฟเฟกต์ที่ลงทะเบียนแล้ว";
+			input .@id, 0, 12000;
+			if (callfunc("F_HfxIdx", .@id) < 0) {
+				mes " ";
+				clear;
+				mes "รหัส " + .@id + " ไม่อยู่ในรายการที่ลงทะเบียน";
+				next;
+				break;
+			}
+			if (inarray(@mx_id, .@id) >= 0) break;
+			if (.@m == 0) deletearray @mx_id;
+			@mx_id[getarraysize(@mx_id)] = .@id;
+			callfunc "F_HfxApply";
+			break;
+		case 3:
+			if (!.@m) break;
+			mes " ";
+			clear;
+			mes "เลือกรายการที่จะลบ";
+			.@menu$ = "";
+			for (.@i = 0; .@i < .@m; .@i++)
+				.@menu$ += (.@i + 1) + ". " + callfunc("F_HfxName", @mx_id[.@i]) + ":";
+			.@menu$ += "ยกเลิก";
+			.@d = select(.@menu$) - 1;
+			if (.@d < .@m) {
+				deletearray @mx_id[.@d], 1;
+				callfunc "F_HfxApply";
+			}
+			break;
+		case 4:
+			if (.@m < 2) break;
+			mes " ";
+			clear;
+			mes "เลือกรายการที่จะเลื่อนขึ้นหนึ่งลำดับ";
+			.@menu$ = "";
+			for (.@i = 1; .@i < .@m; .@i++)
+				.@menu$ += (.@i + 1) + ". " + callfunc("F_HfxName", @mx_id[.@i]) + ":";
+			.@menu$ += "ยกเลิก";
+			.@d = select(.@menu$);
+			if (.@d < .@m) {
+				.@a = @mx_id[.@d];
+				@mx_id[.@d] = @mx_id[.@d - 1];
+				@mx_id[.@d - 1] = .@a;
+				callfunc "F_HfxApply";
+			}
+			break;
+		case 5:
+			deletearray @mx_id;
+			callfunc "F_HfxApply";
+			break;
+		case 6:
+			if (!.@m) break;
+			mes " ";
+			clear;
+			mes "ตั้งชื่อกลุ่ม (เช่น Dragonkin, Angel_A)";
+			input .@nm$;
+			if (.@nm$ == "") break;
+			.@ids$ = "";
+			for (.@i = 0; .@i < .@m; .@i++)
+				.@ids$ += (.@i ? "," : "") + @mx_id[.@i];
+			.@slot = inarray($hfxg_nm$, .@nm$);
+			if (.@slot < 0) .@slot = getarraysize($hfxg_nm$);
+			$hfxg_nm$[.@slot] = .@nm$;
+			$hfxg_ids$[.@slot] = .@ids$;
+			mes " ";
+			clear;
+			mes "บันทึกกลุ่ม ^0F766E" + .@nm$ + "^000000 แล้ว (" + .@m + " เอฟเฟกต์)";
+			next;
+			break;
+		case 7:
+		case 8:
+			.@g = getarraysize($hfxg_nm$);
+			if (!.@g || ($hfxg_nm$[0] == "" && .@g == 1)) {
+				mes " ";
+				clear;
+				mes "ยังไม่มีกลุ่มที่บันทึกไว้";
+				next;
+				break;
+			}
+			mes " ";
+			clear;
+			mes (.@s == 7 ? "เลือกกลุ่มที่จะโหลด" : "เลือกกลุ่มที่จะลบ");
+			.@menu$ = "";
+			for (.@i = 0; .@i < .@g; .@i++)
+				.@menu$ += $hfxg_nm$[.@i] + ":";
+			.@menu$ += "ยกเลิก";
+			.@d = select(.@menu$) - 1;
+			if (.@d >= .@g) break;
+			if (.@s == 7) {
+				deletearray @mx_id;
+				deletearray .@t$;
+				.@cnt = explode(.@t$, $hfxg_ids$[.@d], ",");
+				for (.@i = 0; .@i < .@cnt && .@i < .max; .@i++)
+					@mx_id[.@i] = atoi(.@t$[.@i]);
+				callfunc "F_HfxApply";
+			} else {
+				deletearray $hfxg_nm$[.@d], 1;
+				deletearray $hfxg_ids$[.@d], 1;
+			}
+			break;
+		case 9:
+			if (!.@m) break;
+			.@out$ = "";
+			for (.@i = 0; .@i < .@m; .@i++)
+				.@out$ += (.@i ? "," : "") + "HAT_EF_" + callfunc("F_HfxName", @mx_id[.@i]);
+			debugmes "[HatFxMixer] " + strcharinfo(0) + ": " + .@out$;
+			mes " ";
+			clear;
+			mes "ใส่ในช่อง .@h$ ของเผ่าใน npc/custom/race_system.txt (ลำดับ = ดาว 1, 2, 3):";
+			mes " ";
+			mes "^0F766E" + .@out$ + "^000000";
+			mes " ";
+			mes "(เขียนลง log ของ map-server ไว้แล้วด้วย)";
+			next;
+			break;
+		case 10:
+			mes " ";
+			clear;
+			.@b = getarraysize($hfx_bad);
+			if (!.@b || ($hfx_bad[0] == 0 && .@b == 1)) {
+				mes "ยังไม่มีรายการที่ทำเครื่องหมายไว้";
+				next;
+				break;
+			}
+			mes "ตำแหน่งเพี้ยน (" + .@b + " รายการ):";
+			.@l$ = "";
+			for (.@i = 0; .@i < .@b; .@i++)
+				.@l$ += (.@i ? ", " : "") + $hfx_bad[.@i];
+			mes .@l$;
+			debugmes "[HatFxMixer] bad position ids: " + .@l$;
+			next;
+			if (select("ล้างรายการนี้", "กลับ") == 1) deletearray $hfx_bad;
+			break;
+		case 11:
+			deletearray @mx_id;
+			callfunc "F_HfxApply";
+			close;
+		default:
+			close;
+		}
+	}
+	end;
+}
