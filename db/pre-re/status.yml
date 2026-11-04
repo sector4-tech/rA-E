@@ -6917,6 +6917,8 @@ Body:
       NoClearance: true
   - Status: Quest_Buff3
     Icon: EFST_QUEST_BUFF3
+    CalcFlags:
+      Speed: true
     Flags:
       NoSave: true
       NoRemoveOnDead: true

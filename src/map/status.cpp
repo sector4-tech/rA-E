@@ -8063,6 +8063,10 @@ static uint16 status_calc_speed(block_list *bl, status_change *sc, int32 speed)
 		}
 		speed_rate -= val;
 
+		// rA-E Race System: stacks like a mount (status SC_QUEST_BUFF3, val2 = move speed % of the active race)
+		if( sc->getSCE(SC_QUEST_BUFF3) && sc->getSCE(SC_QUEST_BUFF3)->val2 > 0 )
+			speed_rate -= sc->getSCE(SC_QUEST_BUFF3)->val2;
+
 		// GetMoveSlowValue()
 		if( sd && sc->getSCE(SC_HIDING) && pc_checkskill(sd,RG_TUNNELDRIVE) > 0 )
 			val = 120 - 6 * pc_checkskill(sd,RG_TUNNELDRIVE);
