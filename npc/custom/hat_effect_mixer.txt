@@ -120,6 +120,7 @@ OnCmd:
 					.@f = -1;
 					for (.@k = 1; .@k <= .@n; .@k++) {
 						.@j = (.@c + .@k) % .@n;
+						if (!(.@k % 200)) sleep2 1;
 						if (compare(getelementofarray(getvariableofnpc(.fx_nm$, "HatFxViewer"), .@j), .@q$)) {
 							.@f = .@j;
 							break;
@@ -139,8 +140,10 @@ OnCmd:
 					mes "พิมพ์รหัสเอฟเฟกต์ (จะข้ามไปรหัสที่ใกล้ที่สุดในรายการ)";
 					input .@want, 0, 12000;
 					.@c = 0;
-					while (.@c < .@n - 1 && getelementofarray(getvariableofnpc(.fx_id, "HatFxViewer"), .@c) < .@want)
+					while (.@c < .@n - 1 && getelementofarray(getvariableofnpc(.fx_id, "HatFxViewer"), .@c) < .@want) {
 						.@c++;
+						if (!(.@c % 200)) sleep2 1;
+					}
 					break;
 				case 10:
 					if (inarray($hfx_bad, .@cid) < 0) $hfx_bad[getarraysize($hfx_bad)] = .@cid;

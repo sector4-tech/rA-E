@@ -1038,7 +1038,7 @@ OnCmd:
 			input .@want, 0, 12000;
 			.@i = 0;
 			while (.@i < .fx_n - 1 && .fx_id[.@i] < .@want)
-				.@i++;
+				{ .@i++; if (!(.@i % 300)) sleep2 1; }
 			break;
 		case 8:
 			mes " ";
@@ -1049,6 +1049,7 @@ OnCmd:
 			.@found = -1;
 			for (.@k = 1; .@k <= .fx_n; .@k++) {
 				.@j = (.@i + .@k) % .fx_n;
+				if (!(.@k % 300)) sleep2 1;
 				if (compare(.fx_nm$[.@j], .@q$)) {
 					.@found = .@j;
 					break;
@@ -1076,7 +1077,7 @@ OnCmd:
 			if (.@c == 7) .@want = 4000;
 			.@i = 0;
 			while (.@i < .fx_n - 1 && .fx_id[.@i] < .@want)
-				.@i++;
+				{ .@i++; if (!(.@i % 300)) sleep2 1; }
 			break;
 		case 10:
 			hateffect @hfx_cur, 0;
