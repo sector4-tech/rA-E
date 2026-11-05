@@ -1,7 +1,7 @@
 //===== rAthena Script =======================================
 //= Hat Effect Viewer (Thai) - rA-E custom
 //===== Description: =========================================
-//= GM tool to preview all 4616 registered hat effects of this client.
+//= GM tool to preview all 4617 registered hat effects of this client.
 //= Command:  @hatfx          open the browser (next / previous / jump / search by name)
 //=           @hatfx <id>     show one effect by id        @hatfx off   remove the effect being previewed
 //= The effect list is generated (see doc/hat_effect_catalog.txt). Saved as TIS-620 / cp874.
@@ -397,7 +397,7 @@ OnInit:
 	setarray .fx_id[4572], 7820, 7821, 7822, 7823, 7824, 7825, 7826, 7827, 7828, 7829, 7830, 7831;
 	setarray .fx_id[4584], 7832, 7833, 7834, 7835, 7836, 7837, 7838, 7839, 7840, 7841, 7842, 7843;
 	setarray .fx_id[4596], 7844, 7845, 7846, 7847, 7848, 7849, 7850, 7851, 7852, 7853, 7854, 7855;
-	setarray .fx_id[4608], 7856, 7857, 7858, 7859, 7860, 7861, 7862, 7863;
+	setarray .fx_id[4608], 7856, 7857, 7858, 7859, 7860, 7861, 7862, 7863, 7864;
 	setarray .fx_nm$[0], "BLOSSOM_FLUTTERING", "MERMAID_LONGING", "RL_BANISHING_BUSTER", "LJOSALFAR", "FLUTTER_BUTTERFLY", "ANGEL_FLUTTERING", "BLESSING_OF_ANGELS", "VALHALLA_IDOL";
 	setarray .fx_nm$[8], "ANGEL_STAIRS", "GLOW_OF_NEW_YEAR", "STRANGELIGHTS", "FEATHER_FLUTTERING", "CAMELLIA_HAIR_PIN", "FLORAL_WALTZ", "MAGICAL_FEATHER", "GOLD_SHOWER";
 	setarray .fx_nm$[16], "FIREWORK", "RETURN_TW_1ST_HAT", "C_FLUTTERBUTTERFLY_BL", "QSCARABA", "FSTONE", "MAGICCIRCLE", "FULL_BLOOMCHERRY_TREE", "C_BLESSINGS_OF_SOUL";
@@ -975,6 +975,7 @@ OnInit:
 	setarray .fx_nm$[4592], "KR_OMINOUS_RED_MOONLIGHT", "KR_PERSON_EFFECT", "KR_RED_POTION", "KR_SCARLET_POTION", "KR_SHADOW_OF_VOID", "KR_SOUL_BURN", "KR_SPELL_DEPLOY2", "KR_SPELL_DEPLOY3";
 	setarray .fx_nm$[4600], "KR_SPELL_DEPLOY4", "KR_SPELL_DEPLOY5", "KR_SPELL_RELEASE", "KR_TRACKING", "KR_WHITE_POTION", "KR_YELLOW_POTION", "MINEFFECT_NEW_ARMSCANNON_NEW_ARMSCANNON_01_CLOCK_DOWN_NEW_ARMSCANNON_01_DOWN", "NEW_ARMSCANNON_NEW_ARMSCANNON_01_CLOCK_DOWN_NEW_ARMSCANNON_01_DOWN";
 	setarray .fx_nm$[4608], "SPELL_ENCHANTING_MIN_SPELL_ENCHANTING", "STORMCANNON_STORMCANNON_CAST_MIN_STORMCANNON_CAST", "STORMCANNON_STORMCANNON_CAST_BOTTOM_MIN_STORMCANNON_CAST_BOTTOM", "STORMCANNON_STORMCANNON_CAST_BOTTOM", "STORMCANNON_STORMCANNON_HIT_MIN_STORMCANNON_HIT", "VIOLENTQUAKE_VIOLENTQUAKE_BOTTOM_VIOLENTQUAKE_CAST_BOTTOM", "VIOLENTQUAKE_VIOLENTQUAKE_HIT_MIN_VIOLENTQUAKE_HIT", "WINDSIGN_WINDTARGET_LOOP_MIN_WINDSIGN_LOOP";
+	setarray .fx_nm$[4616], "C_SHINING_DEVIL_WING";
 	.fx_n = getarraysize(.fx_id);
 	bindatcmd "hatfx", "HatFxViewer::OnCmd";
 	end;

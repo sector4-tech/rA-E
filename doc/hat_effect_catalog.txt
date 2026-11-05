@@ -4618,3 +4618,4 @@
 7861 | HAT_EF_VIOLENTQUAKE_VIOLENTQUAKE_BOTTOM_VIOLENTQUAKE_CAST_BOTTOM | violentquake\violentquake_bottom\violentquake_cast_bottom.str
 7862 | HAT_EF_VIOLENTQUAKE_VIOLENTQUAKE_HIT_MIN_VIOLENTQUAKE_HIT | violentquake\violentquake_hit\min_violentquake_hit.str
 7863 | HAT_EF_WINDSIGN_WINDTARGET_LOOP_MIN_WINDSIGN_LOOP | windsign\windtarget_loop\min_windsign_loop.str
+7864 | HAT_EF_C_SHINING_DEVIL_WING | efst_c_shining_devil_wing\c_shining_devil_wing.str
