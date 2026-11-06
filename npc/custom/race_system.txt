@@ -1,24 +1,24 @@
-//===== rAthena Script =======================================
+//===== rAthena Script ========================================
 //= Race System (Thai) - rA-E custom
-//===== Description: =========================================
+//===== Description: ========================================
 //= Inspired by the Roblox "Races" system.
 //=  - 10 races with different roll chances, 3 star levels each
 //=  - 6 race slots: slots 1-2 are free, slots 3-6 are opened with Race Slot Key
 //=  - a Race Roll item re-rolls ONE chosen slot (open and not locked)
 //=  - rolling a race you already own raises its stars (shared by all slots)
 //=  - ONE active slot gives the bonuses, hat effect and status icon
-//===== Items: ===============================================
+//===== Items: ========================================
 //= 32501 Race_Roll      - one roll of all unlocked slots
 //= 32502 Race_Slot_Key  - opens the next extra slot (3..6)
 //= 32503 Race_Book      - opens this menu (also: @race)
-//===== Notes: ===============================================
+//===== Notes: ========================================
 //= ** SAVE AS TIS-620 / cp874 ** (Thai client)
 //= Bonuses are applied by the status SC_QUEST_BUFF3 (db/pre-re/status.yml)
 //= which calls function F_RaceBonus below.
 //= Permanent char variables: race_s1..6 (race in slot), race_lock (bitmask),
 //= race_open (extra slots opened 0..4), race_act (active slot 1..6),
 //= race_st1..10 (stars of each race 0..3)
-//============================================================
+//========================================
 
 -	script	RaceSystem	-1,{
 	end;
@@ -56,7 +56,7 @@ prontera,152,181,4	script	Race Master	4_F_KAFRA1,{
 // field 0 name | 1 chance in 1/1000 | 2 color | 3 hat effects (csv of constants) | 4 perks "type:star1:star2:star3,..." | 5 rarity 1..5
 // field 6 focus perk types (csv, shown as "เด่น") | 7 specialty title
 // Focus perks get a few extra points; every shared perk is still strictly higher in a rarer race.
-// perk types: 1 EXP% 2 Drop% 3 -Skill delay% 6 DEF% 7 Move speed% 8 Crit rate 14 Luk% (C++) 15 Skill damage% (C++)
+// perk types: 1 EXP% 2 Drop% 3 -Skill delay% 6 DEF% (% of equipment DEF) 7 Move speed% 8 Crit rate 12 ASPD% (Vampire and up) 14 Luk% (C++) 15 Skill damage% (C++)
 // The values below are the OWNER'S table (original Roblox-style bonuses). Void-Elf star 3 values (Luk 22, Speed 24, Skill CD 18) were missing in the table and were chosen by the script author.
 // PYRAMID: tier N has all perks of tiers 1..N (see F_RacePerkTier). RARITY RULE: the rarer the race (lower chance), the higher
 // EVERY shared perk is, at every star level (Human < Goblin < Skeleton < Yeti < Vampire < Dragonkin < Void-Elf < Demon < Angel < Lavakin).
@@ -73,17 +73,17 @@ function	script	F_RaceData	{
 	case 4:  .@n$ = "Yeti";      .@p = 127; .@c$ = "^0284C7"; .@t = 2; .@h$ = "HAT_EF_AURA_ARCANE_BLUE_AURA_AURARING,HAT_EF_AURA_ARTIC_GALAXY_AURA_AURARING,HAT_EF_AURA_CREST_MOON_AURA_AURARING,HAT_EF_AURASVIP2_FROZEN_SLASH_FROZEN_SLASH_CASTING_BOTTOM_FROZEN_SLASH_CAST_BOTTOM";
 		.@k$ = "1:2:6:10,2:2:6:10,6:9:13:18,14:10:15:20"; .@fc$ = "6,14"; .@tl$ = "สายทนทานและโชค"; break;
 	case 5:  .@n$ = "Vampire";   .@p = 56;  .@c$ = "^7E22CE"; .@t = 3; .@h$ = "HAT_EF_C_SHINING_DEVIL_WING,HAT_EF_AURA_PUMPKIN_AURA_AURARING,HAT_EF_AURA_PURPLE_PACE_AURA_AURARING,HAT_EF_AURASVIP_BENEDICTUM_BENEDICTUM_CAST_BOTTOM,HAT_EF_AURASVIP_SINCEREFAITH_SINCEREFAITH_BOTTOM";
-		.@k$ = "1:4:10:14,2:4:10:14,3:6:10:14,15:6:10:14"; .@fc$ = "3,15"; .@tl$ = "สายสกิลไว"; break;
+		.@k$ = "1:4:10:14,2:4:10:14,3:6:10:14,15:6:10:14,12:3:4:5"; .@fc$ = "3,15"; .@tl$ = "สายสกิลไว"; break;
 	case 6:  .@n$ = "Dragonkin"; .@p = 23;  .@c$ = "^EA580C"; .@t = 4; .@h$ = "HAT_EF_RESONATETAEGO,HAT_EF_AURA_ARCANE_AURA_AURARING,HAT_EF_AURA_PURPLE_PACE_AURA_AURARING,HAT_EF_AURASVIP_BENEDICTUM_BENEDICTUM_CAST_BOTTOM,HAT_EF_AURASVIP_SINCEREFAITH_SINCEREFAITH_BOTTOM,HAT_EF_AURASVIP_TERRADRIVE_TERRADRIVE_CAST";
-		.@k$ = "1:8:14:20,2:8:14:20,8:5:8:11,15:10:15:20"; .@fc$ = "8,15"; .@tl$ = "สายคริและสกิล"; break;
+		.@k$ = "1:8:14:20,2:8:14:20,8:5:8:11,15:10:15:20,12:4:5:6"; .@fc$ = "8,15"; .@tl$ = "สายคริและสกิล"; break;
 	case 7:  .@n$ = "Void-Elf";  .@p = 15;  .@c$ = "^CA8A04"; .@t = 4; .@h$ = "HAT_EF_C_ASTRA_BLESSING,HAT_EF_AURA_PURPLE_PACE_AURA_AURARING,HAT_EF_AURASVIP_BENEDICTUM_BENEDICTUM_CAST_BOTTOM,HAT_EF_AURASVIP_SINCEREFAITH_SINCEREFAITH_BOTTOM,HAT_EF_AURASVIP_TERRADRIVE_TERRADRIVE_CAST";
-		.@k$ = "1:8:14:20,2:8:14:20,14:12:15:22,7:12:18:24,3:10:10:18"; .@fc$ = "14,7,3"; .@tl$ = "สายโชคและความไว"; break;
+		.@k$ = "1:8:14:20,2:8:14:20,14:12:15:22,7:12:18:24,3:10:10:18,12:5:6:7"; .@fc$ = "14,7,3"; .@tl$ = "สายโชคและความไว"; break;
 	case 8:  .@n$ = "Demon";     .@p = 4;   .@c$ = "^B91C1C"; .@t = 5; .@h$ = "HAT_EF_C_SHINING_DEVIL_WING,HAT_EF_AURA_ARCANE_PINK_AURA_AURARING,HAT_EF_AURASVIP_BENEDICTUM_BENEDICTUM_CAST_BOTTOM,HAT_EF_AURASVIP_SINCEREFAITH_SINCEREFAITH_BOTTOM,HAT_EF_AURASVIP_TERRADRIVE_TERRADRIVE_CAST";
-		.@k$ = "1:15:22:30,2:15:22:30,14:20:30:40,3:15:20:25,15:18:28:38,7:20:30:40,8:15:25:35"; .@fc$ = "14,15,7,8"; .@tl$ = "สายล่าสังหาร"; break;
+		.@k$ = "1:15:22:30,2:15:22:30,14:20:30:40,3:15:20:25,15:18:28:38,7:20:30:40,8:15:25:35,12:6:8:10"; .@fc$ = "14,15,7,8"; .@tl$ = "สายล่าสังหาร"; break;
 	case 9:  .@n$ = "Angel";     .@p = 3;   .@c$ = "^E11D48"; .@t = 5; .@h$ = "HAT_EF_C_SHINING_ANGEL_WING,HAT_EF_AURASVIP_ATTACK_STANCE_ATTACK_STANCE_CAST_BOTTOM,HAT_EF_AURA_PURPLE_PACE_AURA_AURARING,HAT_EF_AURASVIP_BENEDICTUM_BENEDICTUM_CAST_BOTTOM,HAT_EF_AURASVIP_SINCEREFAITH_SINCEREFAITH_BOTTOM,HAT_EF_AURASVIP_TERRADRIVE_TERRADRIVE_CAST";
-		.@k$ = "1:20:27:31,2:20:27:31,6:23:33:40,3:18:22:28,15:20:30:34,7:25:35:45,8:18:28:33"; .@fc$ = "6,7"; .@tl$ = "สายค้ำจุนและเร็วแรง"; break;
+		.@k$ = "1:20:27:31,2:20:27:31,6:23:33:40,3:18:22:28,15:20:30:34,7:25:35:45,8:18:28:33,12:7:9:11"; .@fc$ = "6,7"; .@tl$ = "สายค้ำจุนและเร็วแรง"; break;
 	case 10: .@n$ = "Lavakin";   .@p = 2;   .@c$ = "^C026D3"; .@t = 5; .@h$ = "HAT_EF_C_SHINING_LAVAKIN_WING,HAT_EF_AURASVIP2_REBOUND_SHIELD_REBOUND_SHIELD_CAST,HAT_EF_AURASVIP_BENEDICTUM_BENEDICTUM_CAST_BOTTOM,HAT_EF_AURASVIP_SINCEREFAITH_SINCEREFAITH_BOTTOM,HAT_EF_AURASVIP_TERRADRIVE_TERRADRIVE_CAST,HAT_EF_AURASVIP_ARDOR_ARDOR_CAST_BOTTOM,HAT_EF_FLUFFYWING,HAT_EF_BIOLO_BO_DUST_EXPLOSION_DUST_EXPLOSION_HIT_MIN_DUST_EXPLOSION_HIT";
-		.@k$ = "1:24:31:40,2:24:31:40,3:21:25:40,15:23:33:40,6:26:36:46,7:30:40:50,8:20:30:40"; .@fc$ = "3,7"; .@tl$ = "สายสมบูรณ์แบบ"; break;
+		.@k$ = "1:24:31:40,2:24:31:40,3:21:25:40,15:23:33:40,6:26:36:46,7:30:40:50,8:20:30:40,12:8:11:14"; .@fc$ = "3,7"; .@tl$ = "สายสมบูรณ์แบบ"; break;
 	default: .@n$ = "-"; .@p = 0; .@c$ = "^000000"; .@t = 1; .@h$ = ""; .@k$ = ""; .@fc$ = ""; .@tl$ = ""; break;
 	}
 	switch (.@f) {
@@ -143,7 +143,7 @@ function	script	F_RacePerkName	{
 	case 9:  return "MaxHP";
 	case 10: return "MaxSP";
 	case 11: return "พลังฮีล";
-	case 12: return "ความเร็วโจมตี ASPD";
+	case 12: return "ASPD";
 	case 13: return "ลดเวลาร่ายสกิล";
 	case 14: return "Luk";
 	case 15: return "Skill Damage";
@@ -157,7 +157,7 @@ function	script	F_RacePerkTier	{
 	case 1: return 1;
 	case 2: return 2;
 	case 6: case 7: case 14: return 3;
-	case 8: case 15: return 4;
+	case 8: case 12: case 15: return 4;
 	}
 	return 5;
 }
@@ -225,6 +225,7 @@ function	script	F_RaceBonus	{
 		case 6:  bonus bDefRate, .@val; break;
 		case 7:  break; // move speed is applied in C++ (status_calc_speed) from SC_QUEST_BUFF3 val2: it stacks like a mount
 		case 8:  bonus bCritical, .@val; break;
+		case 12: bonus bAspdRate, .@val; break;
 		case 14: break; // Luk% is applied in C++ (status_calc_luk) from SC_QUEST_BUFF3 val3
 		case 15: break; // Skill damage% is applied in C++ (battle_skill_damage) from SC_QUEST_BUFF3 val4
 		}
@@ -302,15 +303,15 @@ function	script	F_RaceUI	{
 		.@ar = (race_act >= 1 && race_act <= 6) ? getd("race_s" + race_act) : 0;
 		if (.@ar) {
 			.@rc$ = F_RaceData(.@ar, 2);
-			mes .@rc$ + "====================================================^000000";
+			mes .@rc$ + "========================================^000000";
 			mes " " + F_RaceName(.@ar) + "   " + F_RaceStarBar(getd("race_st" + .@ar)) + "   " + F_RaceRarity(F_RaceData(.@ar, 5), 1) + F_RaceRarity(F_RaceData(.@ar, 5), 0) + "^000000   ^6B7280ช่อง " + race_act + "^000000";
 			mes " ^6B7280แนวทาง:^000000 " + .@rc$ + F_RaceData(.@ar, 7) + "^000000";
-			mes .@rc$ + "- - - - - - - - - - - - - - - - - - - - - - - - - - -^000000";
+			mes .@rc$ + "- - - - - - - - - - - - - - - - - - - - -^000000";
 			deletearray .@ln$[0], getarraysize(.@ln$);
 			explode(.@ln$, F_RacePerkLines(.@ar, getd("race_st" + .@ar), 1), "|");
 			for (.@i = 0; .@i < getarraysize(.@ln$); .@i++)
 				mes " " + .@ln$[.@i];
-			mes .@rc$ + "====================================================^000000";
+			mes .@rc$ + "========================================^000000";
 		} else {
 			mes "^9CA3AF ยังไม่ได้เลือกเผ่าที่ใช้งาน (เมนู 'เลือกเผ่าที่ใช้งาน')^000000";
 		}
@@ -383,7 +384,7 @@ L_Roll:
 	setd "race_st" + .@pick, .@new;
 	callsub L_Title, "ผลการสุ่มช่อง " + .@c;
 	.@rc$ = F_RaceData(.@pick, 2);
-	mes .@rc$ + "====================================================^000000";
+	mes .@rc$ + "========================================^000000";
 	mes " ได้รับเผ่า  " + F_RaceName(.@pick) + "   " + F_RaceStarBar(.@new) + "   " + F_RaceRarity(F_RaceData(.@pick, 5), 1) + F_RaceRarity(F_RaceData(.@pick, 5), 0) + "^000000";
 	if (.@old == 0)
 		mes " ^15803Dเผ่าใหม่!^000000 " + F_RaceStarTxt(.@new);
@@ -392,7 +393,7 @@ L_Roll:
 	else
 		mes " ดาวเต็มแล้ว (3/3)";
 	mes " ^6B7280แนวทาง:^000000 " + .@rc$ + F_RaceData(.@pick, 7) + "^000000";
-	mes .@rc$ + "====================================================^000000";
+	mes .@rc$ + "========================================^000000";
 	callfunc "F_RaceApply";
 	next;
 	return;
@@ -473,17 +474,17 @@ L_Info:
 	callsub L_Title, F_RaceData(.@r, 0);
 	.@st = getd("race_st" + .@r);
 	.@rc$ = F_RaceData(.@r, 2);
-	mes .@rc$ + "====================================================^000000";
+	mes .@rc$ + "========================================^000000";
 	mes " " + F_RaceName(.@r) + "   " + F_RaceStarBar(.@st) + "   " + F_RaceRarity(F_RaceData(.@r, 5), 1) + F_RaceRarity(F_RaceData(.@r, 5), 0) + "^000000";
 	mes " ^6B7280โอกาสสุ่มได้^000000 " + (F_RaceData(.@r, 1) / 10) + "." + (F_RaceData(.@r, 1) % 10) + "%   ^6B7280(เฉลี่ยประมาณ " + (1000 / F_RaceData(.@r, 1)) + " ครั้ง)^000000";
 	mes " ^6B7280แนวทาง:^000000 " + .@rc$ + F_RaceData(.@r, 7) + "^000000";
-	mes .@rc$ + "- - - - - - - - - - - - - - - - - - - - - - - - - - -^000000";
+	mes .@rc$ + "- - - - - - - - - - - - - - - - - - - - -^000000";
 	mes "^9CA3AF ค่าเรียงเป็น ดาว 1 / ดาว 2 / ดาว 3  (สีเผ่า = ดาวปัจจุบัน)^000000";
 	deletearray .@ln$[0], getarraysize(.@ln$);
 	explode(.@ln$, F_RacePerkLines(.@r, .@st), "|");
 	for (.@i = 0; .@i < getarraysize(.@ln$); .@i++)
 		mes " " + .@ln$[.@i];
-	mes .@rc$ + "====================================================^000000";
+	mes .@rc$ + "========================================^000000";
 	next;
 	return;
 
@@ -517,11 +518,11 @@ L_Clr:
 	return;
 
 L_Title:
-	setdialogsize 640, 520;
+	setdialogsize 480, 400;
 	callsub L_Clr;
 	setdialogalign DIALOG_ALIGN_LEFT;
-	mes "^4C1D95====================================================^000000";
+	mes "^4C1D95========================================^000000";
 	mes "^7E22CE RACE SYSTEM ^9CA3AF |^000000 ^0F766E" + getarg(0) + "^000000";
-	mes "^4C1D95====================================================^000000";
+	mes "^4C1D95========================================^000000";
 	return;
 }
