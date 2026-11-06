@@ -1586,6 +1586,7 @@ void chrif_parse_ack_vipActive(int32 fd) {
 	if (((flag&0x4) || changed) && !sd->vip.disableshowrate) {
 		clif_display_pinfo( *sd );
 	}
+	pc_vip_icon_refresh(sd);
 #endif
 }
 

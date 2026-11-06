@@ -22,9 +22,10 @@ prontera,153,183,5	script	VIP Manager	4_F_KAFRA1,{
 	mes "[VIP Manager]";
 	mes "VIP benefits:";
 	mes "- +" + .vip_exp + "% Base/Job EXP, +" + .vip_drop + "% item drops";
-	mes "- Extra storage slots and extra character slots";
-	mes "- No gemstone requirement for skills";
+	mes "- +300 storage slots, no gemstone needed for skills";
+	mes "- Lower death penalty, bigger Battle Manual bonus";
 	mes "- Access to the #vip channel and @rates";
+	mes "- VIP status icon shown on your buff bar";
 	next;
 	switch (select(
 		"Buy 1 day - " + .price[0] + "z:" +

@@ -1556,6 +1556,8 @@
 	export_constant(SC_QUEST_BUFF3);
 	export_constant(SC_ALL_RIDING);
 	export_constant(SC_AUTOBATTLE);
+	export_constant(SC_VIP_ACTIVE);
+	export_constant(SC_VIP_NORMAL);
 	export_constant(SC_TEARGAS_SOB);
 	export_constant(SC__FEINTBOMB);
 	export_constant(SC__CHAOS);
@@ -3490,6 +3492,8 @@
 	export_constant(EFST_PARTYEXP_LV4);
 	export_constant(EFST_PARTYEXP_LV5);
 	export_constant(EFST_AUTOATTACK);
+	export_constant(EFST_VIPSTATUS);
+	export_constant(EFST_MEMBER0);
 
 	export_constant(EFST_MAX);
 

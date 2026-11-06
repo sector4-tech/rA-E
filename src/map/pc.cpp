@@ -16196,3 +16196,23 @@ void do_init_pc(void) {
 	ers_chunk_size(num_reg_ers, 300);
 	ers_chunk_size(str_reg_ers, 50);
 }
+
+
+/**
+ * rA-E: show the VIP status icon (VIP) or the normal-player icon (non VIP).
+ * Called after the VIP state is received from the char-server and after login.
+ */
+void pc_vip_icon_refresh(map_session_data *sd){
+	if( sd == nullptr || sd->state.autotrade )
+		return;
+	bool vip = pc_isvip(sd);
+	if( sd->sc.getSCE(SC_VIP_ACTIVE) && !vip )
+		status_change_end(sd, SC_VIP_ACTIVE);
+	if( sd->sc.getSCE(SC_VIP_NORMAL) && vip )
+		status_change_end(sd, SC_VIP_NORMAL);
+	if( vip ){
+		if( !sd->sc.getSCE(SC_VIP_ACTIVE) )
+			sc_start(sd, sd, SC_VIP_ACTIVE, 100, 1, INFINITE_TICK);
+	}else if( !sd->sc.getSCE(SC_VIP_NORMAL) )
+		sc_start(sd, sd, SC_VIP_NORMAL, 100, 1, INFINITE_TICK);
+}

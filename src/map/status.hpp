@@ -1456,6 +1456,8 @@ enum sc_type : int16 {
 	SC_PARTY_BONUS_LV5,
 
 	SC_AUTOBATTLE, // Custom: Auto Battle is running (autobattle.cpp)
+	SC_VIP_ACTIVE, // Custom: icon for VIP players (pc_vip_icon_refresh)
+	SC_VIP_NORMAL, // Custom: icon for non-VIP players (pc_vip_icon_refresh)
 
 	SC_MAX, //Automatically updated max, used in for's to check we are within bounds.
 };
@@ -2968,6 +2970,9 @@ enum efst_type : int16{
 	EFST_PARTYEXP_LV5,			// 1705
 
 	EFST_AUTOATTACK = 1741, ///< client icon EFST_AI_AUTOATTACK.tga (used by Auto Battle)
+
+	EFST_VIPSTATUS = 1500,	///< client icon VIPBUFF.tga (VIP player)
+	EFST_MEMBER0 = 2511,	///< client icon vip0.tga (normal player)
 
 	EFST_MAX,
 };

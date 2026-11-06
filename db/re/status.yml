@@ -10010,6 +10010,24 @@ Body:
       NoBanishingBuster: true
       NoClearance: true
       NoSave: true
+  - Status: Vip_Active
+    Icon: EFST_VIPSTATUS
+    Flags:
+      NoSave: true
+      NoRemoveOnDead: true
+      NoClearbuff: true
+      NoDispell: true
+      NoBanishingBuster: true
+      NoClearance: true
+  - Status: Vip_Normal
+    Icon: EFST_MEMBER0
+    Flags:
+      NoSave: true
+      NoRemoveOnDead: true
+      NoClearbuff: true
+      NoDispell: true
+      NoBanishingBuster: true
+      NoClearance: true
   - Status: Autobattle
     Icon: EFST_AUTOATTACK
     Flags:
