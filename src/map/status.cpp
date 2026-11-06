@@ -7127,6 +7127,9 @@ static uint16 status_calc_luk(block_list *bl, status_change *sc, int32 luk)
 	}
 	if(sc->getSCE(SC_CURSE))
 		return 0;
+	// rA-E Race System: Luk % of the active race (SC_QUEST_BUFF3, val3)
+	if(sc->getSCE(SC_QUEST_BUFF3) && sc->getSCE(SC_QUEST_BUFF3)->val3 > 0)
+		luk += luk * sc->getSCE(SC_QUEST_BUFF3)->val3 / 100;
 	if(sc->getSCE(SC_INCALLSTATUS))
 		luk += sc->getSCE(SC_INCALLSTATUS)->val1;
 	if(sc->getSCE(SC_TRUESIGHT))

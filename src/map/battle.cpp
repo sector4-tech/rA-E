@@ -2848,7 +2848,12 @@ static int32 battle_skill_damage(block_list *src, block_list *target, uint16 ski
 	if (!target || !skill_id)
 		return 0;
 	skill_id = skill_dummy2skill_id(skill_id);
-	return battle_skill_damage_skill(src, target, skill_id) + battle_skill_damage_map(src, target, skill_id);
+	int32 rate = battle_skill_damage_skill(src, target, skill_id) + battle_skill_damage_map(src, target, skill_id);
+	// rA-E Race System: global skill damage % of the active race (SC_QUEST_BUFF3, val4)
+	status_change *rsc = status_get_sc(src);
+	if (rsc != nullptr && rsc->getSCE(SC_QUEST_BUFF3) != nullptr && rsc->getSCE(SC_QUEST_BUFF3)->val4 > 0)
+		rate += rsc->getSCE(SC_QUEST_BUFF3)->val4;
+	return rate;
 }
 
 /**

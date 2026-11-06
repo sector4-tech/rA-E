@@ -6919,6 +6919,7 @@ Body:
     Icon: EFST_QUEST_BUFF3
     CalcFlags:
       Speed: true
+      Luk: true
     Flags:
       NoSave: true
       NoRemoveOnDead: true
