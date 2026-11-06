@@ -64,25 +64,25 @@ function	script	F_RaceData	{
 	.@r = getarg(0);
 	.@f = getarg(1);
 	switch (.@r) {
-	case 1:  .@n$ = "Human";     .@p = 269; .@c$ = "^4B5563"; .@t = 1; .@h$ = "HAT_EF_FEATHER_FLUTTERING";
+	case 1:  .@n$ = "Human";     .@p = 269; .@c$ = "^4B5563"; .@t = 1; .@h$ = "HAT_EF_AURASVIP_TERRADRIVE_TERRADRIVE_CAST";
 		.@k$ = "1:0:4:7,2:0:4:7"; .@fc$ = ""; .@tl$ = "สมดุล"; break;
-	case 2:  .@n$ = "Goblin";    .@p = 256; .@c$ = "^15803D"; .@t = 1; .@h$ = "HAT_EF_C_SUDDEN_WEALTH_TW,HAT_EF_FLORAL_WALTZ";
+	case 2:  .@n$ = "Goblin";    .@p = 256; .@c$ = "^15803D"; .@t = 1; .@h$ = "HAT_EF_AURA_CELTIC_GREEN_AURA_AURARING,HAT_EF_AURA_PURPLE_PACE_AURA_AURARING,HAT_EF_AURASVIP_SINCEREFAITH_SINCEREFAITH_BOTTOM,HAT_EF_AURASVIP_TERRADRIVE_TERRADRIVE_CAST";
 		.@k$ = "1:0:4:8,2:0:4:8,7:8:10:12"; .@fc$ = "7"; .@tl$ = "สายความเร็ว"; break;
-	case 3:  .@n$ = "Skeleton";  .@p = 245; .@c$ = "^57534E"; .@t = 1; .@h$ = "HAT_EF_NIFLHEIM_NIGHT_SKY,HAT_EF_AUTUMN_FULL_MOON";
+	case 3:  .@n$ = "Skeleton";  .@p = 245; .@c$ = "^57534E"; .@t = 1; .@h$ = "HAT_EF_AURA_PURPLE_PACE_AURA_AURARING,HAT_EF_AURASVIP_SINCEREFAITH_SINCEREFAITH_BOTTOM,HAT_EF_AURASVIP_TERRADRIVE_TERRADRIVE_CAST,HAT_EF_AURA_DRAGON_HEAD_AURA_AURARING";
 		.@k$ = "1:0:4:8,2:0:4:8,8:3:5:7,15:0:4:7"; .@fc$ = "8,15"; .@tl$ = "สายคริติคอล"; break;
-	case 4:  .@n$ = "Yeti";      .@p = 127; .@c$ = "^0369A1"; .@t = 2; .@h$ = "HAT_EF_SNOW_POWDER,HAT_EF_SNOWFLAKE_TIARA,HAT_EF_GIFT_OF_SNOW";
+	case 4:  .@n$ = "Yeti";      .@p = 127; .@c$ = "^0369A1"; .@t = 2; .@h$ = "HAT_EF_AURA_ARCANE_BLUE_AURA_AURARING,HAT_EF_AURA_ARTIC_GALAXY_AURA_AURARING,HAT_EF_AURA_CREST_MOON_AURA_AURARING,HAT_EF_AURASVIP2_FROZEN_SLASH_FROZEN_SLASH_CASTING_BOTTOM_FROZEN_SLASH_CAST_BOTTOM";
 		.@k$ = "1:2:6:10,2:2:6:10,6:9:13:18,14:10:15:20"; .@fc$ = "6,14"; .@tl$ = "สายทนทานและโชค"; break;
-	case 5:  .@n$ = "Vampire";   .@p = 56;  .@c$ = "^7E22CE"; .@t = 3; .@h$ = "HAT_EF_C_ROMANCE_ROSE_TW,HAT_EF_C_DISAPEAR_TIME_TW";
+	case 5:  .@n$ = "Vampire";   .@p = 56;  .@c$ = "^7E22CE"; .@t = 3; .@h$ = "HAT_EF_C_SHINING_DEVIL_WING,HAT_EF_AURA_PUMPKIN_AURA_AURARING,HAT_EF_AURA_PURPLE_PACE_AURA_AURARING,HAT_EF_AURASVIP_BENEDICTUM_BENEDICTUM_CAST_BOTTOM,HAT_EF_AURASVIP_SINCEREFAITH_SINCEREFAITH_BOTTOM";
 		.@k$ = "1:4:10:14,2:4:10:14,3:6:10:14,15:6:10:14"; .@fc$ = "3,15"; .@tl$ = "สายสกิลไว"; break;
-	case 6:  .@n$ = "Dragonkin"; .@p = 23;  .@c$ = "^C2410C"; .@t = 4; .@h$ = "HAT_EF_RESONATETAEGO,HAT_EF_C_RELEASED_GROUND,HAT_EF_FIREWORK";
+	case 6:  .@n$ = "Dragonkin"; .@p = 23;  .@c$ = "^C2410C"; .@t = 4; .@h$ = "HAT_EF_RESONATETAEGO,HAT_EF_AURA_ARCANE_AURA_AURARING,HAT_EF_AURA_PURPLE_PACE_AURA_AURARING,HAT_EF_AURASVIP_BENEDICTUM_BENEDICTUM_CAST_BOTTOM,HAT_EF_AURASVIP_SINCEREFAITH_SINCEREFAITH_BOTTOM,HAT_EF_AURASVIP_TERRADRIVE_TERRADRIVE_CAST";
 		.@k$ = "1:8:14:20,2:8:14:20,8:5:8:11,15:10:15:20"; .@fc$ = "8,15"; .@tl$ = "สายคริและสกิล"; break;
-	case 7:  .@n$ = "Void-Elf";  .@p = 15;  .@c$ = "^1D4ED8"; .@t = 4; .@h$ = "HAT_EF_COSMIC_CONNECTION,HAT_EF_MANYSTARS,HAT_EF_MAGICCIRCLE_BLUE_TW";
+	case 7:  .@n$ = "Void-Elf";  .@p = 15;  .@c$ = "^1D4ED8"; .@t = 4; .@h$ = "HAT_EF_C_ASTRA_BLESSING,HAT_EF_AURA_PURPLE_PACE_AURA_AURARING,HAT_EF_AURASVIP_BENEDICTUM_BENEDICTUM_CAST_BOTTOM,HAT_EF_AURASVIP_SINCEREFAITH_SINCEREFAITH_BOTTOM,HAT_EF_AURASVIP_TERRADRIVE_TERRADRIVE_CAST";
 		.@k$ = "1:8:14:20,2:8:14:20,14:12:15:22,7:12:18:24,3:10:10:18"; .@fc$ = "14,7,3"; .@tl$ = "สายโชคและความไว"; break;
-	case 8:  .@n$ = "Demon";     .@p = 4;   .@c$ = "^B91C1C"; .@t = 5; .@h$ = "HAT_EF_C_DARK_LORD_CLOAK,HAT_EF_RL_BANISHING_BUSTER,HAT_EF_NIGHTSKYOFRUTIE";
+	case 8:  .@n$ = "Demon";     .@p = 4;   .@c$ = "^B91C1C"; .@t = 5; .@h$ = "HAT_EF_C_SHINING_DEVIL_WING,HAT_EF_AURA_ARCANE_PINK_AURA_AURARING,HAT_EF_AURASVIP_BENEDICTUM_BENEDICTUM_CAST_BOTTOM,HAT_EF_AURASVIP_SINCEREFAITH_SINCEREFAITH_BOTTOM,HAT_EF_AURASVIP_TERRADRIVE_TERRADRIVE_CAST";
 		.@k$ = "1:15:22:30,2:15:22:30,14:20:30:40,3:15:20:25,15:18:28:38,7:20:30:40,8:15:25:35"; .@fc$ = "14,15,7,8"; .@tl$ = "สายล่าสังหาร"; break;
-	case 9:  .@n$ = "Angel";     .@p = 3;   .@c$ = "^B45309"; .@t = 5; .@h$ = "HAT_EF_BLESSING_OF_ANGELS,HAT_EF_ANGEL_FLUTTERING,HAT_EF_MIDGARTS_GLORY";
+	case 9:  .@n$ = "Angel";     .@p = 3;   .@c$ = "^B45309"; .@t = 5; .@h$ = "HAT_EF_C_SHINING_ANGEL_WING,HAT_EF_AURASVIP_ATTACK_STANCE_ATTACK_STANCE_CAST_BOTTOM,HAT_EF_AURA_PURPLE_PACE_AURA_AURARING,HAT_EF_AURASVIP_BENEDICTUM_BENEDICTUM_CAST_BOTTOM,HAT_EF_AURASVIP_SINCEREFAITH_SINCEREFAITH_BOTTOM,HAT_EF_AURASVIP_TERRADRIVE_TERRADRIVE_CAST";
 		.@k$ = "1:20:27:31,2:20:27:31,6:23:33:40,3:18:22:28,15:20:30:34,7:25:35:45,8:18:28:33"; .@fc$ = "6,7"; .@tl$ = "สายค้ำจุนและเร็วแรง"; break;
-	case 10: .@n$ = "Lavakin";   .@p = 2;   .@c$ = "^0E7490"; .@t = 5; .@h$ = "HAT_EF_C_SWIRLING_FLAME,HAT_EF_C_HELM_OF_RA,HAT_EF_MAGICCIRCLERAINBOW";
+	case 10: .@n$ = "Lavakin";   .@p = 2;   .@c$ = "^0E7490"; .@t = 5; .@h$ = "HAT_EF_C_SHINING_LAVAKIN_WING,HAT_EF_AURASVIP2_REBOUND_SHIELD_REBOUND_SHIELD_CAST,HAT_EF_AURASVIP_BENEDICTUM_BENEDICTUM_CAST_BOTTOM,HAT_EF_AURASVIP_SINCEREFAITH_SINCEREFAITH_BOTTOM,HAT_EF_AURASVIP_TERRADRIVE_TERRADRIVE_CAST,HAT_EF_AURASVIP_ARDOR_ARDOR_CAST_BOTTOM,HAT_EF_FLUFFYWING,HAT_EF_BIOLO_BO_DUST_EXPLOSION_DUST_EXPLOSION_HIT_MIN_DUST_EXPLOSION_HIT";
 		.@k$ = "1:24:31:40,2:24:31:40,3:21:25:40,15:23:33:40,6:26:36:46,7:30:40:50,8:20:30:40"; .@fc$ = "3,7"; .@tl$ = "สายสมบูรณ์แบบ"; break;
 	default: .@n$ = "-"; .@p = 0; .@c$ = "^000000"; .@t = 1; .@h$ = ""; .@k$ = ""; .@fc$ = ""; .@tl$ = ""; break;
 	}
@@ -243,7 +243,7 @@ function	script	F_RacePerkVal	{
 }
 
 // (Re)applies the active race: status (bonus + icon) and hat effects.
-// Hat effects: the first N effects of the race are shown, N = stars of the race. Only effects whose .str exists in the client
+// Hat effects: ALL effects of the race are shown at every star level (others identify the race by its effects). Only effects whose .str exists in the client
 // (checked with check_hat_effects.py) may be listed in F_RaceData field 3.
 function	script	F_RaceApply	{
 	.@a = race_act;
@@ -260,11 +260,9 @@ function	script	F_RaceApply	{
 				hateffect getd(.@e$[.@j]), 0;
 	}
 	if (.@r) {
-		// effects shown = number of stars of the race (1 star = first effect, 3 stars = first three)
-		.@show = getd("race_st" + .@r);
 		deletearray .@e$[0], getarraysize(.@e$);
 		explode(.@e$, F_RaceData(.@r, 3), ",");
-		for (.@j = 0; .@j < getarraysize(.@e$) && .@j < .@show; .@j++)
+		for (.@j = 0; .@j < getarraysize(.@e$); .@j++)
 			if (.@e$[.@j] != "")
 				hateffect getd(.@e$[.@j]), 1;
 	}
