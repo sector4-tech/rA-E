@@ -518,8 +518,9 @@ L_Clr:
 	return;
 
 L_Title:
+	mes " ";
 	setdialogsize 480, 400;
-	callsub L_Clr;
+	clear;
 	setdialogalign DIALOG_ALIGN_LEFT;
 	mes "^4C1D95========================================^000000";
 	mes "^7E22CE RACE SYSTEM ^9CA3AF |^000000 ^0F766E" + getarg(0) + "^000000";
