@@ -19,6 +19,7 @@
 #include <common/utilities.hpp>
 #include <common/utils.hpp>
 
+#include "chrif.hpp"
 #include "battle.hpp"
 #include "battleground.hpp"
 #include "clif.hpp"
@@ -14126,6 +14127,11 @@ int32 status_change_end( block_list* bl, enum sc_type type, int32 tid ){
 	}
 	if (type == SC_QUEST_BUFF3 && sd != nullptr && sd->state.active)
 		clif_name_area(sd);
+#ifdef VIP_ENABLE
+	// rA-E: VIP icon ran out -> ask the char-server again (it will switch to the normal-player icon)
+	if (type == SC_VIP_ACTIVE && sd != nullptr && sd->state.active && sd->vip.enabled && sd->vip.time <= time(nullptr))
+		chrif_req_login_operation(sd->status.account_id, sd->status.name, CHRIF_OP_LOGIN_VIP, 0, 1|8, 0);
+#endif
 
 	if (calc_flag.any()) {
 #ifndef RENEWAL

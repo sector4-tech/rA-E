@@ -16211,8 +16211,13 @@ void pc_vip_icon_refresh(map_session_data *sd){
 	if( sd->sc.getSCE(SC_VIP_NORMAL) && vip )
 		status_change_end(sd, SC_VIP_NORMAL);
 	if( vip ){
-		if( !sd->sc.getSCE(SC_VIP_ACTIVE) )
-			sc_start(sd, sd, SC_VIP_ACTIVE, 100, 1, INFINITE_TICK);
+		// restart so the icon counts down to the current expiry time
+		if( sd->sc.getSCE(SC_VIP_ACTIVE) )
+			status_change_end(sd, SC_VIP_ACTIVE);
+		time_t left = sd->vip.time - time(nullptr);
+		if( left < 1 )
+			left = 1;
+		sc_start(sd, sd, SC_VIP_ACTIVE, 100, 1, (t_tick)left * 1000);
 	}else if( !sd->sc.getSCE(SC_VIP_NORMAL) )
 		sc_start(sd, sd, SC_VIP_NORMAL, 100, 1, INFINITE_TICK);
 }
