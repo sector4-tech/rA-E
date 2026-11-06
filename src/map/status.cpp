@@ -13194,6 +13194,9 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 
 	if (!(flag&SCSTART_NOICON) && !(flag&SCSTART_LOADED && scdb->flag[SCF_DISPLAYPC] || scdb->flag[SCF_DISPLAYNPC])) {
 		int32 status_icon = scdb->icon;
+		// rA-E Race System: one status icon per race (EFST_PAD_READER_KNIGHT.. = Human, Goblin, Skeleton, Yeti, Vampire, Dragonkin, Void-Elf, Demon, Angel, Lavakin)
+		if (type == SC_QUEST_BUFF3 && (val1 % 100) >= 1 && (val1 % 100) <= 10)
+			status_icon = EFST_PAD_READER_KNIGHT + (val1 % 100) - 1;
 
 #if PACKETVER < 20151104
 		if (status_icon == EFST_WEAPONPROPERTY)
@@ -14090,6 +14093,8 @@ int32 status_change_end( block_list* bl, enum sc_type type, int32 tid ){
 
 	// On Aegis, when turning off a status change, first goes the sc packet, then the option packet.
 	int32 status_icon = scdb->icon;
+	if (type == SC_QUEST_BUFF3 && (val1 % 100) >= 1 && (val1 % 100) <= 10) // rA-E Race System icon (see status_change_start)
+		status_icon = EFST_PAD_READER_KNIGHT + (val1 % 100) - 1;
 
 #if PACKETVER < 20151104
 	if (status_icon == EFST_WEAPONPROPERTY)
