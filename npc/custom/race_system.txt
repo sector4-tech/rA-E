@@ -64,25 +64,25 @@ function	script	F_RaceData	{
 	.@r = getarg(0);
 	.@f = getarg(1);
 	switch (.@r) {
-	case 1:  .@n$ = "Human";     .@p = 269; .@c$ = "^4B5563"; .@t = 1; .@h$ = "HAT_EF_AURASVIP_TERRADRIVE_TERRADRIVE_CAST";
+	case 1:  .@n$ = "Human";     .@p = 269; .@c$ = "^64748B"; .@t = 1; .@h$ = "HAT_EF_AURASVIP_TERRADRIVE_TERRADRIVE_CAST";
 		.@k$ = "1:0:4:7,2:0:4:7"; .@fc$ = ""; .@tl$ = "สมดุล"; break;
-	case 2:  .@n$ = "Goblin";    .@p = 256; .@c$ = "^15803D"; .@t = 1; .@h$ = "HAT_EF_AURA_CELTIC_GREEN_AURA_AURARING,HAT_EF_AURA_PURPLE_PACE_AURA_AURARING,HAT_EF_AURASVIP_SINCEREFAITH_SINCEREFAITH_BOTTOM,HAT_EF_AURASVIP_TERRADRIVE_TERRADRIVE_CAST";
+	case 2:  .@n$ = "Goblin";    .@p = 256; .@c$ = "^16A34A"; .@t = 1; .@h$ = "HAT_EF_AURA_CELTIC_GREEN_AURA_AURARING,HAT_EF_AURA_PURPLE_PACE_AURA_AURARING,HAT_EF_AURASVIP_SINCEREFAITH_SINCEREFAITH_BOTTOM,HAT_EF_AURASVIP_TERRADRIVE_TERRADRIVE_CAST";
 		.@k$ = "1:0:4:8,2:0:4:8,7:8:10:12"; .@fc$ = "7"; .@tl$ = "สายความเร็ว"; break;
-	case 3:  .@n$ = "Skeleton";  .@p = 245; .@c$ = "^57534E"; .@t = 1; .@h$ = "HAT_EF_AURA_PURPLE_PACE_AURA_AURARING,HAT_EF_AURASVIP_SINCEREFAITH_SINCEREFAITH_BOTTOM,HAT_EF_AURASVIP_TERRADRIVE_TERRADRIVE_CAST,HAT_EF_AURA_DRAGON_HEAD_AURA_AURARING";
+	case 3:  .@n$ = "Skeleton";  .@p = 245; .@c$ = "^3F6212"; .@t = 1; .@h$ = "HAT_EF_AURA_PURPLE_PACE_AURA_AURARING,HAT_EF_AURASVIP_SINCEREFAITH_SINCEREFAITH_BOTTOM,HAT_EF_AURASVIP_TERRADRIVE_TERRADRIVE_CAST,HAT_EF_AURA_DRAGON_HEAD_AURA_AURARING";
 		.@k$ = "1:0:4:8,2:0:4:8,8:3:5:7,15:0:4:7"; .@fc$ = "8,15"; .@tl$ = "สายคริติคอล"; break;
-	case 4:  .@n$ = "Yeti";      .@p = 127; .@c$ = "^0369A1"; .@t = 2; .@h$ = "HAT_EF_AURA_ARCANE_BLUE_AURA_AURARING,HAT_EF_AURA_ARTIC_GALAXY_AURA_AURARING,HAT_EF_AURA_CREST_MOON_AURA_AURARING,HAT_EF_AURASVIP2_FROZEN_SLASH_FROZEN_SLASH_CASTING_BOTTOM_FROZEN_SLASH_CAST_BOTTOM";
+	case 4:  .@n$ = "Yeti";      .@p = 127; .@c$ = "^0284C7"; .@t = 2; .@h$ = "HAT_EF_AURA_ARCANE_BLUE_AURA_AURARING,HAT_EF_AURA_ARTIC_GALAXY_AURA_AURARING,HAT_EF_AURA_CREST_MOON_AURA_AURARING,HAT_EF_AURASVIP2_FROZEN_SLASH_FROZEN_SLASH_CASTING_BOTTOM_FROZEN_SLASH_CAST_BOTTOM";
 		.@k$ = "1:2:6:10,2:2:6:10,6:9:13:18,14:10:15:20"; .@fc$ = "6,14"; .@tl$ = "สายทนทานและโชค"; break;
 	case 5:  .@n$ = "Vampire";   .@p = 56;  .@c$ = "^7E22CE"; .@t = 3; .@h$ = "HAT_EF_C_SHINING_DEVIL_WING,HAT_EF_AURA_PUMPKIN_AURA_AURARING,HAT_EF_AURA_PURPLE_PACE_AURA_AURARING,HAT_EF_AURASVIP_BENEDICTUM_BENEDICTUM_CAST_BOTTOM,HAT_EF_AURASVIP_SINCEREFAITH_SINCEREFAITH_BOTTOM";
 		.@k$ = "1:4:10:14,2:4:10:14,3:6:10:14,15:6:10:14"; .@fc$ = "3,15"; .@tl$ = "สายสกิลไว"; break;
-	case 6:  .@n$ = "Dragonkin"; .@p = 23;  .@c$ = "^C2410C"; .@t = 4; .@h$ = "HAT_EF_RESONATETAEGO,HAT_EF_AURA_ARCANE_AURA_AURARING,HAT_EF_AURA_PURPLE_PACE_AURA_AURARING,HAT_EF_AURASVIP_BENEDICTUM_BENEDICTUM_CAST_BOTTOM,HAT_EF_AURASVIP_SINCEREFAITH_SINCEREFAITH_BOTTOM,HAT_EF_AURASVIP_TERRADRIVE_TERRADRIVE_CAST";
+	case 6:  .@n$ = "Dragonkin"; .@p = 23;  .@c$ = "^EA580C"; .@t = 4; .@h$ = "HAT_EF_RESONATETAEGO,HAT_EF_AURA_ARCANE_AURA_AURARING,HAT_EF_AURA_PURPLE_PACE_AURA_AURARING,HAT_EF_AURASVIP_BENEDICTUM_BENEDICTUM_CAST_BOTTOM,HAT_EF_AURASVIP_SINCEREFAITH_SINCEREFAITH_BOTTOM,HAT_EF_AURASVIP_TERRADRIVE_TERRADRIVE_CAST";
 		.@k$ = "1:8:14:20,2:8:14:20,8:5:8:11,15:10:15:20"; .@fc$ = "8,15"; .@tl$ = "สายคริและสกิล"; break;
-	case 7:  .@n$ = "Void-Elf";  .@p = 15;  .@c$ = "^1D4ED8"; .@t = 4; .@h$ = "HAT_EF_C_ASTRA_BLESSING,HAT_EF_AURA_PURPLE_PACE_AURA_AURARING,HAT_EF_AURASVIP_BENEDICTUM_BENEDICTUM_CAST_BOTTOM,HAT_EF_AURASVIP_SINCEREFAITH_SINCEREFAITH_BOTTOM,HAT_EF_AURASVIP_TERRADRIVE_TERRADRIVE_CAST";
+	case 7:  .@n$ = "Void-Elf";  .@p = 15;  .@c$ = "^CA8A04"; .@t = 4; .@h$ = "HAT_EF_C_ASTRA_BLESSING,HAT_EF_AURA_PURPLE_PACE_AURA_AURARING,HAT_EF_AURASVIP_BENEDICTUM_BENEDICTUM_CAST_BOTTOM,HAT_EF_AURASVIP_SINCEREFAITH_SINCEREFAITH_BOTTOM,HAT_EF_AURASVIP_TERRADRIVE_TERRADRIVE_CAST";
 		.@k$ = "1:8:14:20,2:8:14:20,14:12:15:22,7:12:18:24,3:10:10:18"; .@fc$ = "14,7,3"; .@tl$ = "สายโชคและความไว"; break;
 	case 8:  .@n$ = "Demon";     .@p = 4;   .@c$ = "^B91C1C"; .@t = 5; .@h$ = "HAT_EF_C_SHINING_DEVIL_WING,HAT_EF_AURA_ARCANE_PINK_AURA_AURARING,HAT_EF_AURASVIP_BENEDICTUM_BENEDICTUM_CAST_BOTTOM,HAT_EF_AURASVIP_SINCEREFAITH_SINCEREFAITH_BOTTOM,HAT_EF_AURASVIP_TERRADRIVE_TERRADRIVE_CAST";
 		.@k$ = "1:15:22:30,2:15:22:30,14:20:30:40,3:15:20:25,15:18:28:38,7:20:30:40,8:15:25:35"; .@fc$ = "14,15,7,8"; .@tl$ = "สายล่าสังหาร"; break;
-	case 9:  .@n$ = "Angel";     .@p = 3;   .@c$ = "^B45309"; .@t = 5; .@h$ = "HAT_EF_C_SHINING_ANGEL_WING,HAT_EF_AURASVIP_ATTACK_STANCE_ATTACK_STANCE_CAST_BOTTOM,HAT_EF_AURA_PURPLE_PACE_AURA_AURARING,HAT_EF_AURASVIP_BENEDICTUM_BENEDICTUM_CAST_BOTTOM,HAT_EF_AURASVIP_SINCEREFAITH_SINCEREFAITH_BOTTOM,HAT_EF_AURASVIP_TERRADRIVE_TERRADRIVE_CAST";
+	case 9:  .@n$ = "Angel";     .@p = 3;   .@c$ = "^E11D48"; .@t = 5; .@h$ = "HAT_EF_C_SHINING_ANGEL_WING,HAT_EF_AURASVIP_ATTACK_STANCE_ATTACK_STANCE_CAST_BOTTOM,HAT_EF_AURA_PURPLE_PACE_AURA_AURARING,HAT_EF_AURASVIP_BENEDICTUM_BENEDICTUM_CAST_BOTTOM,HAT_EF_AURASVIP_SINCEREFAITH_SINCEREFAITH_BOTTOM,HAT_EF_AURASVIP_TERRADRIVE_TERRADRIVE_CAST";
 		.@k$ = "1:20:27:31,2:20:27:31,6:23:33:40,3:18:22:28,15:20:30:34,7:25:35:45,8:18:28:33"; .@fc$ = "6,7"; .@tl$ = "สายค้ำจุนและเร็วแรง"; break;
-	case 10: .@n$ = "Lavakin";   .@p = 2;   .@c$ = "^0E7490"; .@t = 5; .@h$ = "HAT_EF_C_SHINING_LAVAKIN_WING,HAT_EF_AURASVIP2_REBOUND_SHIELD_REBOUND_SHIELD_CAST,HAT_EF_AURASVIP_BENEDICTUM_BENEDICTUM_CAST_BOTTOM,HAT_EF_AURASVIP_SINCEREFAITH_SINCEREFAITH_BOTTOM,HAT_EF_AURASVIP_TERRADRIVE_TERRADRIVE_CAST,HAT_EF_AURASVIP_ARDOR_ARDOR_CAST_BOTTOM,HAT_EF_FLUFFYWING,HAT_EF_BIOLO_BO_DUST_EXPLOSION_DUST_EXPLOSION_HIT_MIN_DUST_EXPLOSION_HIT";
+	case 10: .@n$ = "Lavakin";   .@p = 2;   .@c$ = "^C026D3"; .@t = 5; .@h$ = "HAT_EF_C_SHINING_LAVAKIN_WING,HAT_EF_AURASVIP2_REBOUND_SHIELD_REBOUND_SHIELD_CAST,HAT_EF_AURASVIP_BENEDICTUM_BENEDICTUM_CAST_BOTTOM,HAT_EF_AURASVIP_SINCEREFAITH_SINCEREFAITH_BOTTOM,HAT_EF_AURASVIP_TERRADRIVE_TERRADRIVE_CAST,HAT_EF_AURASVIP_ARDOR_ARDOR_CAST_BOTTOM,HAT_EF_FLUFFYWING,HAT_EF_BIOLO_BO_DUST_EXPLOSION_DUST_EXPLOSION_HIT_MIN_DUST_EXPLOSION_HIT";
 		.@k$ = "1:24:31:40,2:24:31:40,3:21:25:40,15:23:33:40,6:26:36:46,7:30:40:50,8:20:30:40"; .@fc$ = "3,7"; .@tl$ = "สายสมบูรณ์แบบ"; break;
 	default: .@n$ = "-"; .@p = 0; .@c$ = "^000000"; .@t = 1; .@h$ = ""; .@k$ = ""; .@fc$ = ""; .@tl$ = ""; break;
 	}
@@ -96,6 +96,14 @@ function	script	F_RaceData	{
 	case 7: return .@tl$;
 	}
 	return .@k$;
+}
+
+// Coloured race name (Lavakin = rainbow)
+function	script	F_RaceName	{
+	.@r = getarg(0);
+	if (.@r == 10)
+		return "^EF4444L^F97316a^EAB308v^22C55Ea^06B6D4k^3B82F6i^A855F7n^000000";
+	return F_RaceName(.@r);
 }
 
 // F_RaceRarity(tier, 0 = name | 1 = color)
@@ -162,6 +170,7 @@ function	script	F_RacePerkLines	{
 	.@st = getarg(1);
 	.@cmp = getarg(2, 0);
 	.@foc$ = "," + F_RaceData(.@r, 6) + ",";
+	.@rc$ = F_RaceData(.@r, 2);
 	deletearray .@perk$[0], getarraysize(.@perk$);
 	explode(.@perk$, F_RaceData(.@r, 4), ",");
 	.@np = getarraysize(.@perk$);
@@ -175,7 +184,7 @@ function	script	F_RacePerkLines	{
 		.@mk$ = (compare(.@foc$, "," + .@ty + ",")) ? " ^C2410C(เด่น)^000000" : "";
 		if (.@cmp) {
 			.@cur = .@st < 1 ? 1 : .@st;
-			.@t$ = .@bul$ + F_RacePerkName(.@ty) + " ^15803D+" + .@v$[.@cur] + .@u$ + "^000000" + .@mk$;
+			.@t$ = .@bul$ + F_RacePerkName(.@ty) + " " + .@rc$ + "+" + .@v$[.@cur] + .@u$ + "^000000" + .@mk$;
 			if (.@i % 2 == 0 && .@i < .@np - 1)
 				.@out$ += .@t$ + "   ";
 			else
@@ -183,7 +192,7 @@ function	script	F_RacePerkLines	{
 		} else {
 			.@t$ = .@bul$ + F_RacePerkName(.@ty) + .@mk$ + "  ";
 			for (.@j = 1; .@j <= 3; .@j++) {
-				.@t$ += (.@j == .@st ? "^15803D" : "^9CA3AF") + "+" + .@v$[.@j] + .@u$ + "^000000";
+				.@t$ += (.@j == .@st ? .@rc$ : "^9CA3AF") + "+" + .@v$[.@j] + .@u$ + "^000000";
 				if (.@j < 3)
 					.@t$ += " / ";
 			}
@@ -289,33 +298,23 @@ function	script	F_RaceUI	{
 	while (1) {
 		.@avail = 2 + race_open;
 		callsub L_Title, "ระบบเผ่า";
-		for (.@i = 1; .@i <= 6; .@i++) {
-			.@r = getd("race_s" + .@i);
-			.@line$ = (.@i == race_act ? "^15803D>^000000" : " ") + "ช่อง " + .@i + "  ";
-			if (.@i > .@avail) {
-				.@line$ += "^9CA3AF(ยังไม่ปลดล็อก)^000000";
-			} else if (!.@r) {
-				.@line$ += "^9CA3AF- ว่าง -^000000";
-			} else {
-				.@line$ += F_RaceStarBar(getd("race_st" + .@r)) + " " + F_RaceData(.@r, 2) + F_RaceData(.@r, 0) + "^000000 " + F_RaceRarity(F_RaceData(.@r, 5), 1) + "(" + F_RaceRarity(F_RaceData(.@r, 5), 0) + ")^000000";
-			}
-			if (.@i <= .@avail && (race_lock & (1 << .@i)))
-				.@line$ += " ^B91C1C[ล็อก]^000000";
-			mes .@line$;
-		}
-		mes "^9CA3AF------------------------------------------^000000";
+		callsub L_Slots, .@avail;
 		.@ar = (race_act >= 1 && race_act <= 6) ? getd("race_s" + race_act) : 0;
 		if (.@ar) {
-			mes "เผ่าที่ใช้งาน: " + F_RaceData(.@ar, 2) + F_RaceData(.@ar, 0) + "^000000 " + F_RaceStarBar(getd("race_st" + .@ar)) + " (ช่อง " + race_act + ")";
+			.@rc$ = F_RaceData(.@ar, 2);
+			mes .@rc$ + "====================================================^000000";
+			mes " " + F_RaceName(.@ar) + "   " + F_RaceStarBar(getd("race_st" + .@ar)) + "   " + F_RaceRarity(F_RaceData(.@ar, 5), 1) + F_RaceRarity(F_RaceData(.@ar, 5), 0) + "^000000   ^6B7280ช่อง " + race_act + "^000000";
+			mes " ^6B7280แนวทาง:^000000 " + .@rc$ + F_RaceData(.@ar, 7) + "^000000";
+			mes .@rc$ + "- - - - - - - - - - - - - - - - - - - - - - - - - - -^000000";
 			deletearray .@ln$[0], getarraysize(.@ln$);
 			explode(.@ln$, F_RacePerkLines(.@ar, getd("race_st" + .@ar), 1), "|");
 			for (.@i = 0; .@i < getarraysize(.@ln$); .@i++)
-				mes .@ln$[.@i];
+				mes " " + .@ln$[.@i];
+			mes .@rc$ + "====================================================^000000";
 		} else {
 			mes "^9CA3AF ยังไม่ได้เลือกเผ่าที่ใช้งาน (เมนู 'เลือกเผ่าที่ใช้งาน')^000000";
 		}
-		mes "^9CA3AF------------------------------------------^000000";
-		mes "Race Roll: ^1E3A8A" + countitem(32501) + "^000000   Race Slot Key: ^1E3A8A" + countitem(32502) + "^000000";
+		mes " Race Roll: ^1E3A8A" + countitem(32501) + "^000000    Race Slot Key: ^1E3A8A" + countitem(32502) + "^000000";
 		.@s = select("สุ่มเผ่าในช่อง (ใช้ Race Roll 1 ชิ้น)", "เลือกเผ่าที่ใช้งาน", "ล็อก / ปลดล็อกช่อง", "ปลดช่องเพิ่ม (Race Slot Key)", "ดูโบนัสของเผ่า", "ปิด");
 		switch (.@s) {
 		case 1: callsub L_Roll, .@avail; break;
@@ -339,6 +338,7 @@ L_Roll:
 	}
 	callsub L_Title, "เลือกช่องที่จะสุ่ม";
 	mes "สุ่มทีละ 1 ช่อง ใช้ Race Roll 1 ชิ้น";
+	callsub L_Slots, .@avail;
 	.@menu$ = "";
 	for (.@i = 1; .@i <= 6; .@i++) {
 		.@r = (.@i <= .@avail) ? getd("race_s" + .@i) : 0;
@@ -382,14 +382,17 @@ L_Roll:
 	.@new = (.@old < 3) ? .@old + 1 : 3;
 	setd "race_st" + .@pick, .@new;
 	callsub L_Title, "ผลการสุ่มช่อง " + .@c;
-	.@t$ = F_RaceData(.@pick, 2) + F_RaceData(.@pick, 0) + "^000000 : ";
+	.@rc$ = F_RaceData(.@pick, 2);
+	mes .@rc$ + "====================================================^000000";
+	mes " ได้รับเผ่า  " + F_RaceName(.@pick) + "   " + F_RaceStarBar(.@new) + "   " + F_RaceRarity(F_RaceData(.@pick, 5), 1) + F_RaceRarity(F_RaceData(.@pick, 5), 0) + "^000000";
 	if (.@old == 0)
-		.@t$ += "^15803D เผ่าใหม่! ^000000" + F_RaceStarTxt(.@new);
+		mes " ^15803Dเผ่าใหม่!^000000 " + F_RaceStarTxt(.@new);
 	else if (.@old < 3)
-		.@t$ += "^15803D ดาวเพิ่ม " + .@old + " -> " + .@new + "^000000 (ทุกช่องที่เป็นเผ่านี้อัพเดตด้วย)";
+		mes " ^15803Dดาวเพิ่ม " + .@old + " -> " + .@new + "^000000 (ทุกช่องที่เป็นเผ่านี้อัพเดตด้วย)";
 	else
-		.@t$ += "ดาวเต็มแล้ว (3/3)";
-	mes .@t$;
+		mes " ดาวเต็มแล้ว (3/3)";
+	mes " ^6B7280แนวทาง:^000000 " + .@rc$ + F_RaceData(.@pick, 7) + "^000000";
+	mes .@rc$ + "====================================================^000000";
 	callfunc "F_RaceApply";
 	next;
 	return;
@@ -397,6 +400,7 @@ L_Roll:
 L_Pick:
 	.@avail = getarg(0);
 	callsub L_Title, "เลือกเผ่าที่ใช้งาน";
+	callsub L_Slots, .@avail;
 	.@menu$ = "";
 	for (.@i = 1; .@i <= 6; .@i++) {
 		.@r = (.@i <= .@avail) ? getd("race_s" + .@i) : 0;
@@ -426,6 +430,7 @@ L_Lock:
 	.@avail = getarg(0);
 	callsub L_Title, "ล็อก / ปลดล็อกช่อง";
 	mes "ช่องที่ล็อกจะไม่ถูกสุ่มทับ";
+	callsub L_Slots, .@avail;
 	.@menu$ = "";
 	for (.@i = 1; .@i <= 6; .@i++) {
 		if (.@i > .@avail)
@@ -456,6 +461,8 @@ L_Open:
 
 L_Info:
 	callsub L_Title, "เลือกเผ่าที่ต้องการดู";
+	for (.@r = 1; .@r <= 10; .@r++)
+		mes " " + F_RaceData(.@r, 2) + "|||^000000 " + F_RaceName(.@r) + "  " + F_RaceRarity(F_RaceData(.@r, 5), 1) + F_RaceRarity(F_RaceData(.@r, 5), 0) + "^000000  ^6B7280" + (F_RaceData(.@r, 1) / 10) + "." + (F_RaceData(.@r, 1) % 10) + "%^000000";
 	.@menu$ = "";
 	for (.@r = 1; .@r <= 10; .@r++)
 		.@menu$ += F_RaceData(.@r, 0) + " - " + F_RaceRarity(F_RaceData(.@r, 5), 0) + " (" + (F_RaceData(.@r, 1) / 10) + "." + (F_RaceData(.@r, 1) % 10) + "%):";
@@ -465,17 +472,37 @@ L_Info:
 		return;
 	callsub L_Title, F_RaceData(.@r, 0);
 	.@st = getd("race_st" + .@r);
-	mes F_RaceData(.@r, 2) + "== " + F_RaceData(.@r, 0) + " ==^000000  " + F_RaceRarity(F_RaceData(.@r, 5), 1) + F_RaceRarity(F_RaceData(.@r, 5), 0) + "^000000";
-	mes "โอกาสสุ่มได้ " + (F_RaceData(.@r, 1) / 10) + "." + (F_RaceData(.@r, 1) % 10) + "%  (เฉลี่ยประมาณ " + (1000 / F_RaceData(.@r, 1)) + " ครั้ง)";
-	mes "แนวทาง: " + F_RaceData(.@r, 2) + F_RaceData(.@r, 7) + "^000000";
-	mes "ดาวที่มี: " + F_RaceStarBar(.@st);
-	mes "^9CA3AF โบนัส: ดาว 1 / ดาว 2 / ดาว 3  (สีเขียว = ระดับปัจจุบัน)^000000";
-	mes "^9CA3AF สีเครื่องหมาย + = ระดับเผ่าที่เริ่มมีโบนัสนี้ (เผ่าที่หายากกว่ามีครบทุกโบนัสของเผ่าที่ต่ำกว่า และค่าไม่ต่ำกว่า)^000000";
+	.@rc$ = F_RaceData(.@r, 2);
+	mes .@rc$ + "====================================================^000000";
+	mes " " + F_RaceName(.@r) + "   " + F_RaceStarBar(.@st) + "   " + F_RaceRarity(F_RaceData(.@r, 5), 1) + F_RaceRarity(F_RaceData(.@r, 5), 0) + "^000000";
+	mes " ^6B7280โอกาสสุ่มได้^000000 " + (F_RaceData(.@r, 1) / 10) + "." + (F_RaceData(.@r, 1) % 10) + "%   ^6B7280(เฉลี่ยประมาณ " + (1000 / F_RaceData(.@r, 1)) + " ครั้ง)^000000";
+	mes " ^6B7280แนวทาง:^000000 " + .@rc$ + F_RaceData(.@r, 7) + "^000000";
+	mes .@rc$ + "- - - - - - - - - - - - - - - - - - - - - - - - - - -^000000";
+	mes "^9CA3AF ค่าเรียงเป็น ดาว 1 / ดาว 2 / ดาว 3  (สีเผ่า = ดาวปัจจุบัน)^000000";
 	deletearray .@ln$[0], getarraysize(.@ln$);
 	explode(.@ln$, F_RacePerkLines(.@r, .@st), "|");
 	for (.@i = 0; .@i < getarraysize(.@ln$); .@i++)
-		mes .@ln$[.@i];
+		mes " " + .@ln$[.@i];
+	mes .@rc$ + "====================================================^000000";
 	next;
+	return;
+
+L_Slots:
+	.@avail = getarg(0);
+	for (.@i = 1; .@i <= 6; .@i++) {
+		.@r = getd("race_s" + .@i);
+		.@mk$ = (.@i == race_act) ? "^15803D>>^000000" : "   ";
+		if (.@i > .@avail) {
+			mes .@mk$ + " ^9CA3AF" + .@i + "   ยังไม่ปลดล็อก (ใช้ Race Slot Key)^000000";
+		} else if (!.@r) {
+			mes .@mk$ + " ^6B7280" + .@i + "^000000   ^9CA3AF- ว่าง -^000000" + ((race_lock & (1 << .@i)) ? " ^B91C1C[ล็อก]^000000" : "");
+		} else {
+			.@l$ = .@mk$ + " ^6B7280" + .@i + "^000000 " + F_RaceData(.@r, 2) + "|||^000000 " + F_RaceName(.@r) + "  " + F_RaceStarBar(getd("race_st" + .@r)) + "  " + F_RaceRarity(F_RaceData(.@r, 5), 1) + F_RaceRarity(F_RaceData(.@r, 5), 0) + "^000000";
+			if (race_lock & (1 << .@i))
+				.@l$ += "  ^B91C1C[ล็อก]^000000";
+			mes .@l$;
+		}
+	}
 	return;
 
 L_Msg:
@@ -493,8 +520,8 @@ L_Title:
 	setdialogsize 640, 520;
 	callsub L_Clr;
 	setdialogalign DIALOG_ALIGN_LEFT;
-	mes "^7E22CE== RACE SYSTEM ==^000000";
-	mes "^0F766E" + getarg(0) + "^000000";
-	mes "^9CA3AF----------------------------------------------------^000000";
+	mes "^4C1D95====================================================^000000";
+	mes "^7E22CE RACE SYSTEM ^9CA3AF |^000000 ^0F766E" + getarg(0) + "^000000";
+	mes "^4C1D95====================================================^000000";
 	return;
 }
