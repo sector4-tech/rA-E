@@ -11006,6 +11006,8 @@ void clif_parse_LoadEndAck(int32 fd,map_session_data *sd)
 
 		if (!sd->state.autotrade) { // Don't trigger NPC event or opening vending/buyingstore will be failed
 			npc_script_event( *sd, NPCE_LOGIN );
+			// rA-E: hateffect run by the login event is only stored while connect_new is set, (clif_spawn already happened) so send them now
+			clif_hat_effects( *sd, AREA, *sd );
 		}
 
 		// Set facing direction before check below to update client
