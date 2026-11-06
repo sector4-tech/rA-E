@@ -9028,6 +9028,8 @@ Body:
     Value: 7863
   - Name: HAT_EF_C_SHINING_DEVIL_WING
     Value: 7864
+  - Name: HAT_EF_C_SHINING_LAVAKIN_WING
+    Value: 7865
 
 Footer:
   Imports:
