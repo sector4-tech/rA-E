@@ -103,7 +103,7 @@ function	script	F_RaceName	{
 	.@r = getarg(0);
 	if (.@r == 10)
 		return "^EF4444L^F97316a^EAB308v^22C55Ea^06B6D4k^3B82F6i^A855F7n^000000";
-	return F_RaceName(.@r);
+	return F_RaceData(.@r, 2) + F_RaceData(.@r, 0) + "^000000";
 }
 
 // F_RaceRarity(tier, 0 = name | 1 = color)
