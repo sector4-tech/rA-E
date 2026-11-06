@@ -9951,6 +9951,31 @@ void clif_name( const block_list* src, const block_list* bl, send_target target 
 
 			safestrncpy( packet.name, sd->status.name, NAME_LENGTH );
 
+			// rA-E Race System: show the active race after the name, e.g. "Name *3 Demon" (SC_QUEST_BUFF3 val1 = race + stars * 100)
+			{
+				static const char* race_names[] = { "Human", "Goblin", "Skeleton", "Yeti", "Vampire", "Dragonkin", "Void-Elf", "Demon", "Angel", "Lavakin" };
+				const status_change* rsc = status_get_sc( bl );
+
+				if( rsc != nullptr && rsc->getSCE( SC_QUEST_BUFF3 ) != nullptr ){
+					int32 rv = rsc->getSCE( SC_QUEST_BUFF3 )->val1;
+					int32 race = rv % 100;
+					int32 stars = cap_value( rv / 100, 1, 3 );
+
+					if( race >= 1 && race <= 10 ){
+						char suffix[32];
+						int32 slen = safesnprintf( suffix, sizeof( suffix ), " *%d %s", stars, race_names[race - 1] );
+						int32 maxbase = NAME_LENGTH - 1 - slen;
+
+						if( maxbase > 0 ){
+							// the race tag is always kept complete, a long character name is cut instead
+							char full[NAME_LENGTH];
+							safesnprintf( full, sizeof( full ), "%.*s%s", maxbase, sd->status.name, suffix );
+							safestrncpy( packet.name, full, NAME_LENGTH );
+						}
+					}
+				}
+			}
+
 			party_data *p = nullptr;
 
 			if( sd->status.party_id ){

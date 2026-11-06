@@ -13227,6 +13227,10 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 	else
 		sce->timer = INVALID_TIMER; // Infinite duration
 
+	// rA-E Race System: refresh the name shown above the head (race tag)
+	if (type == SC_QUEST_BUFF3 && sd != nullptr && sd->state.active)
+		clif_name_area(sd);
+
 	if (calc_flag.any()) {
 		if (sd != nullptr) {
 			switch(type) {
@@ -14108,6 +14112,9 @@ int32 status_change_end( block_list* bl, enum sc_type type, int32 tid ){
 			clif_changelook( bl, LOOK_BODY2, sd->status.body );
 		}
 	}
+	if (type == SC_QUEST_BUFF3 && sd != nullptr && sd->state.active)
+		clif_name_area(sd);
+
 	if (calc_flag.any()) {
 #ifndef RENEWAL
 		if (type == SC_MAGICPOWER) {

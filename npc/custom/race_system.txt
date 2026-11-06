@@ -268,8 +268,13 @@ function	script	F_RaceApply	{
 			if (.@e$[.@j] != "")
 				hateffect getd(.@e$[.@j]), 1;
 	}
-	if (.@r)
-		sc_start4 SC_QUEST_BUFF3, -1, .@r, F_RacePerkVal(.@r, 7), F_RacePerkVal(.@r, 14), F_RacePerkVal(.@r, 15), 0;
+	if (.@r) {
+		// val1 = race + stars * 100 (the stars are shown after the character name by the client packet code)
+		.@sv = getd("race_st" + .@r);
+		if (.@sv < 1) .@sv = 1;
+		if (.@sv > 3) .@sv = 3;
+		sc_start4 SC_QUEST_BUFF3, -1, .@r + .@sv * 100, F_RacePerkVal(.@r, 7), F_RacePerkVal(.@r, 14), F_RacePerkVal(.@r, 15);
+	}
 	return;
 }
 
