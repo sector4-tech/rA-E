@@ -151,12 +151,17 @@ struct s_autobattle {
 	// Follow / support mode (priest following a master or the party leader, healing and buffing them)
 	uint8 follow_mode = ABFM_OFF; ///< e_ab_follow
 	uint8 follow_dist = 3; ///< stay within this many cells of the master
+	uint8 combat_dist = 5; ///< while the master fights: keep about this distance (stay back, don't crowd the monster)
+	bool follow_warp = true; ///< teleport / warp after the master (also needs the battle configs)
 	uint32 follow_char_id = 0; ///< master (ABFM_MASTER)
 	std::string follow_name; ///< master name (display only)
 	s_ab_skill pbuffs[AB_MAX_PBUFF_SLOTS]; ///< buffs cast on the master / party members
 	int32 follow_bl = 0; ///< runtime: block id of the master found this tick (0 = none)
 	t_tick follow_lost = 0; ///< runtime: since when the master is missing (0 = present)
 	t_tick next_follow = 0; ///< runtime
+	t_tick next_teleport = 0; ///< runtime: teleport / warp cooldown
+	t_tick master_away_since = 0; ///< runtime: since when the master is on another map / far away (0 = not)
+	t_tick master_fight_tick = 0; ///< runtime: last time the master was seen fighting
 };
 
 // ---- Public API (can be called from atcommands, scripts or a client packet handler) ----

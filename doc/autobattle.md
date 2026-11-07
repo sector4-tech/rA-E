@@ -26,12 +26,21 @@ For support classes (Priest...): the character follows a **master** (any online 
 or the **party leader**, heals / resurrects and buffs the master, itself and the party members nearby, and does
 not hunt. With "fight back" on it attacks only monsters that attack it or the master.
 * Menu: 4. ซัพพอร์ต / ฮีล / ติดตาม. Commands: `follow master <name>`, `follow party`, `follow off`,
-  `follow dist <1-10>`, `pbuff <slot 1-8> <skill> [lv]`, `pbuff clear <slot|all>`.
+  `follow dist <1-10>`, `follow combat <2-9>`, `follow warp <on|off>`, `pbuff <slot 1-8> <skill> [lv]`, `pbuff clear <slot|all>`.
 * Heal skills (`support`, e.g. Heal, Resurrection) are used on the lowest HP % player under the threshold;
   Resurrection is used on dead players first. Buffs for others (`pbuff`, e.g. Blessing, Increase AGI, Kyrie
   Eleison, Impositio Manus) are re-cast on everybody who does not have them.
-* Never warps after the master: when the master is offline / on another map for `autobattle_follow_timeout`
-  seconds (default 60), Auto Battle stops. Restock is not used in follow mode.
+* **Warp after the master** (master in the SAME PARTY, player option `follow warp <on|off>`, default on):
+  * same map, master out of sight (Fly Wing / Teleport) or not reachable on foot: teleport next to him
+    (`autobattle_follow_teleport`, not on `noteleport` maps);
+  * master on another map (Butterfly Wing, Kafra, portal, death...): warp to him after
+    `autobattle_follow_warp_delay` ms (`autobattle_follow_warp`). Never into PvP/WoE/BG maps, `nowarpto` maps
+    or instances of another party. Give quest-gated maps the `nowarpto` mapflag if every player must do the quest.
+  * A master outside the party is only followed on foot.
+* **Stand back while the master fights** (`follow combat <2-9>`, default 5): when the master attacks, casts or is
+  attacked, the follower keeps about that distance on the side away from the monster, still inside heal range.
+* When the master cannot be followed for `autobattle_follow_timeout` seconds (default 60), Auto Battle stops.
+  Restock is not used in follow mode.
 
 ## Map rules (rA-E)
 Auto Battle never warps a character out of a map where a Butterfly Wing is not allowed (`noreturn`, `nowarp`,
@@ -69,7 +78,8 @@ skill <slot 1-16> <skill id|name> [lv] | skill clear <slot|all> | skill cond <sl
 hp|sp <item id|name|off> [%] | pct <hp|sp> <%> | sit <on|off> | sit hp|sp <sit%> <stand%>
 buff <slot 1-8> <skill> [lv] | buff clear <slot|all> | buffitem <slot 1-6> <item> [seconds] | buffitem clear <slot|all>
 support <slot 1-4> <skill> [lv] | support clear <slot|all> | support hp <%>
-follow master <name> | follow party | follow off | follow dist <1-10> | pbuff <slot 1-8> <skill> [lv] | pbuff clear <slot|all>
+follow master <name> | follow party | follow off | follow dist <1-10> | follow combat <2-9> | follow warp <on|off>
+pbuff <slot 1-8> <skill> [lv] | pbuff clear <slot|all>
 loot <on|off> | loot range <1-14> | loot +<item> / -<item> / reset
 restock <on|off> | restock +<item> <amount> / -<item> / reset | restock min <n>
 safety hp <%> | safety item <item|off> | safety player <on|off> | safety weight <on|off> [%]

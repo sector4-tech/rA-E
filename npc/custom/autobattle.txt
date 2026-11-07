@@ -837,30 +837,40 @@ L_Support:
 		callsub L_Title, "4. ซัพพอร์ต / ฮีล / ติดตาม";
 		.@fm = autobattleinfo("follow");
 		mes "โหมดติดตาม: " + (.@fm == 1 ? "^7E22CE" + autobattlestr("fmaster") + "^000000" + (autobattleinfo("fonline") ? "" : " ^9CA3AF(ออฟไลน์)^000000") : (.@fm == 2 ? "^7E22CEหัวหน้าปาร์ตี้^000000" : "^9CA3AFปิด (ล่ามอนสเตอร์ตามปกติ)^000000"));
-		if (.@fm)
-			mes "ระยะติดตาม: " + autobattleinfo("fdist") + " ช่อง / สู้กลับ: " + callsub(L_OC, autobattleinfo("fightback"));
+		if (.@fm) {
+			mes "ระยะติดตาม: " + autobattleinfo("fdist") + " ช่อง / ตอนมาสเตอร์สู้ยืนห่าง: " + autobattleinfo("fcombat") + " ช่อง";
+			mes "วาร์ป/วิงตามมาสเตอร์: " + callsub(L_OC, autobattleinfo("fwarp")) + " ^9CA3AF(เฉพาะมาสเตอร์ในปาร์ตี้เดียวกัน)^000000 / สู้กลับ: " + callsub(L_OC, autobattleinfo("fightback"));
+		}
 		mes "สกิลฮีล: " + callsub(L_CountSlots, "sup", 4) + "/4 ช่อง (เริ่มฮีลเมื่อ HP ต่ำกว่า " + autobattleinfo("suppct") + "%)";
 		mes "สกิลบัพให้ผู้อื่น: " + callsub(L_CountSlots, "pbuff", 8) + "/8 ช่อง";
 		mes "^6B7280ฮีล/บัพ: ตัวเอง + Master + เพื่อนในปาร์ตี้ที่อยู่ใกล้^000000";
-		.@c = select("โหมดติดตาม (Master / ปาร์ตี้):ระยะติดตาม:สกิลฮีล / ชุบชีวิต:สกิลบัพให้ผู้อื่น:ตั้ง % HP ที่จะเริ่มฮีล:สู้กลับเมื่อถูกตี " + callsub(L_OO, autobattleinfo("fightback")) + ":ย้อนกลับ");
+		.@c = select("โหมดติดตาม (Master / ปาร์ตี้):ระยะติดตาม (ปกติ):ระยะยืนห่างตอนมาสเตอร์สู้:วาร์ป / วิงตามมาสเตอร์ " + callsub(L_OO, autobattleinfo("fwarp")) + ":สกิลฮีล / ชุบชีวิต:สกิลบัพให้ผู้อื่น:ตั้ง % HP ที่จะเริ่มฮีล:สู้กลับเมื่อถูกตี " + callsub(L_OO, autobattleinfo("fightback")) + ":ย้อนกลับ");
 		switch (.@c) {
 		case 1: callsub L_Follow; break;
 		case 2:
 			callsub L_Clr;
-			mes "ยืนห่างจาก Master ไม่เกินกี่ช่อง (1-10)";
+			mes "ตอนเดินทาง ยืนห่างจาก Master ไม่เกินกี่ช่อง (1-10)";
 			input .@v, 1, 10;
 			callsub L_Cmd, "follow dist " + .@v;
 			break;
-		case 3: callsub L_Skills, "สกิลฮีล / ชุบชีวิต", "support", "support", "sup", 4; break;
-		case 4: callsub L_Skills, "สกิลบัพให้ผู้อื่น", "pbuff", "pbuff", "pbuff", 8; break;
-		case 5:
+		case 3:
+			callsub L_Clr;
+			mes "ตอน Master ตีมอนสเตอร์ ให้ยืนห่างกี่ช่อง (2-9)";
+			mes "^9CA3AFแนะนำ 5-7 ช่อง: ไม่โดนมอนตีแต่ยังอยู่ในระยะฮีล (9 ช่อง)^000000";
+			input .@v, 2, 9;
+			callsub L_Cmd, "follow combat " + .@v;
+			break;
+		case 4: callsub L_Cmd, "follow warp " + (autobattleinfo("fwarp") ? "off" : "on"); break;
+		case 5: callsub L_Skills, "สกิลฮีล / ชุบชีวิต", "support", "support", "sup", 4; break;
+		case 6: callsub L_Skills, "สกิลบัพให้ผู้อื่น", "pbuff", "pbuff", "pbuff", 8; break;
+		case 7:
 			callsub L_Clr;
 			mes "ฮีลเมื่อ HP ต่ำกว่ากี่ % (1-100)";
 			input .@v, 1, 100;
 			callsub L_Cmd, "support hp " + .@v;
 			break;
-		case 6: callsub L_Cmd, "fightback " + (autobattleinfo("fightback") ? "off" : "on"); break;
-		case 7: return;
+		case 8: callsub L_Cmd, "fightback " + (autobattleinfo("fightback") ? "off" : "on"); break;
+		case 9: return;
 		}
 	}
 
@@ -879,7 +889,9 @@ L_Follow:
 	mes "คอย ^15803Dฮีล / ชุบชีวิต / บัพ^000000 ให้ Master และปาร์ตี้";
 	mes "และจะไม่ไล่ล่ามอนสเตอร์เอง";
 	mes "(สู้กลับเฉพาะเมื่อเปิด 'สู้กลับเมื่อถูกตี')";
-	mes "^9CA3AFถ้า Master ออฟไลน์/ย้ายแผนที่นานเกินไป ระบบจะหยุดเอง^000000";
+	mes "Master วิง/ย้ายแผนที่ จะวาร์ปตามให้อัตโนมัติ";
+	mes "^9CA3AF(ต้องอยู่ปาร์ตี้เดียวกัน, ไม่ตามเข้า PvP/WoE)^000000";
+	mes "^9CA3AFถ้าตามไม่ได้นานเกินไป ระบบจะหยุดเอง^000000";
 	.@c = select("ติดตามสมาชิกในปาร์ตี้ (เลือกชื่อ):ติดตามผู้เล่นนอกปาร์ตี้ (พิมพ์ชื่อ):ติดตามหัวหน้าปาร์ตี้เสมอ:ปิดโหมดติดตาม:ย้อนกลับ");
 	switch (.@c) {
 	case 1:

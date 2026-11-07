@@ -23,6 +23,7 @@
 
 #include "battle.hpp"
 #include "clif.hpp"
+#include "instance.hpp"
 #include "itemdb.hpp"
 #include "log.hpp"
 #include "map.hpp"
@@ -45,6 +46,7 @@
 // ---------------------------------------------------------------------------------------------
 
 static TIMER_FUNC(ab_timer);
+static bool ab_quiet = false; ///< suppress informational output (used by the NPC dialog)
 
 /// UTF-8 -> TIS-620. Only ASCII and the Thai block (U+0E01..U+0E5B) are converted.
 /// A text that is not valid UTF-8 is assumed to already be TIS-620 and is returned unchanged.
@@ -262,7 +264,8 @@ void autobattle_save(map_session_data& sd) {
 		ab_set(sd, "ab_bi", i, ab.buff_items[i].nameid);
 		ab_set(sd, "ab_biv", i, ab.buff_items[i].nameid ? ab.buff_items[i].interval : 0);
 	}
-	ab_set(sd, "ab_follow", 0, (int64)ab.follow_mode | ((int64)ab.follow_dist << 8) | (1LL << 30));
+	ab_set(sd, "ab_follow", 0, (int64)ab.follow_mode | ((int64)ab.follow_dist << 8) | ((int64)ab.combat_dist << 16)
+		| (ab.follow_warp ? 0 : (1LL << 24)) | (1LL << 30));
 	ab_set(sd, "ab_fmaster", 0, ab.follow_char_id);
 	pc_setregistry_str(&sd, ab_key("ab_fmname$"), ab.follow_name.c_str());
 	ab_save_slots(sd, "ab_pbuff", nullptr, ab.pbuffs, AB_MAX_PBUFF_SLOTS);
@@ -352,6 +355,9 @@ static void ab_load(map_session_data& sd, s_autobattle& ab) {
 		ab.follow_dist = (uint8)((fl >> 8) & 0xFF);
 		if (ab.follow_mode > ABFM_PARTY) ab.follow_mode = ABFM_OFF;
 		if (ab.follow_dist < 1 || ab.follow_dist > 10) ab.follow_dist = 3;
+		ab.combat_dist = (uint8)((fl >> 16) & 0xFF);
+		if (ab.combat_dist < 2 || ab.combat_dist > 9) ab.combat_dist = 5;
+		ab.follow_warp = !(fl & (1LL << 24));
 	}
 	ab.follow_char_id = (uint32)ab_get(sd, "ab_fmaster");
 	const char* fname = pc_readregistry_str(&sd, ab_key("ab_fmname$"));
@@ -601,6 +607,9 @@ bool autobattle_start(map_session_data& sd, bool from_item) {
 	ab->follow_bl = 0;
 	ab->follow_lost = 0;
 	ab->next_follow = 0;
+	ab->next_teleport = 0;
+	ab->master_away_since = 0;
+	ab->master_fight_tick = 0;
 	for (auto& sk : ab->pbuffs) sk.next_try = 0;
 	ab->start_tick = ab->last_target_tick = gettick();
 	ab->next_roam = ab->next_hp_item = ab->next_sp_item = ab->next_flee_item = ab->next_boss_check = ab->next_sit_action = 0;
@@ -1273,7 +1282,118 @@ static map_session_data* ab_follow_master(map_session_data& sd, s_autobattle& ab
 	return nullptr;
 }
 
-/// Follow / support mode: stay close to the master, heal and buff the master and the party, optionally fight back.
+/// May a follower appear on map 'm' (the master's map)? Never PvP/WoE/BG, "nowarpto" maps or instances of another party.
+static bool ab_follow_can_enter(const map_session_data& sd, int16 m) {
+	map_data* mapdata = map_getmapdata(m);
+	if (mapdata == nullptr || mapdata->getMapFlag(MF_NOWARPTO) || map_flag_vs(m))
+		return false;
+	if (mapdata->instance_id > 0) {
+		std::shared_ptr<s_instance_data> idata = rathena::util::umap_find(instances, mapdata->instance_id);
+		if (idata == nullptr || idata->mode != IM_PARTY || !sd.status.party_id || idata->owner_id != sd.status.party_id)
+			return false;
+	}
+	return true;
+}
+
+static int32 ab_master_threat_sub(block_list* bl, va_list ap) {
+	int32 master_id = va_arg(ap, int32);
+	int32* count = va_arg(ap, int32*);
+	mob_data* md = (mob_data*)bl;
+	if (md->target_id == master_id && !status_isdead(*md))
+		(*count)++;
+	return 0;
+}
+
+/// Is the master fighting (attacking, casting, or attacked by a monster)?
+static bool ab_master_fighting(map_session_data& master) {
+	if (master.ud.attacktimer != INVALID_TIMER || master.ud.skilltimer != INVALID_TIMER)
+		return true;
+	int32 count = 0;
+	map_foreachinrange(ab_master_threat_sub, &master, 9, BL_MOB, master.id, &count);
+	return count > 0;
+}
+
+/// Teleport / warp after the master is only allowed for a master in the same party
+static bool ab_same_party(const map_session_data& sd, const map_session_data& master) {
+	return sd.status.party_id && master.status.party_id == sd.status.party_id;
+}
+
+/// Teleports / warps the follower next to the master (also to another map). @return true on success
+static bool ab_follow_jump(map_session_data& sd, s_autobattle& ab, map_session_data& master, int32 range, t_tick tick) {
+	map_data* mapdata = map_getmapdata(master.m);
+	if (mapdata == nullptr)
+		return false;
+	int16 x = master.x, y = master.y;
+	range = std::max(1, range);
+	if (!map_search_freecell(nullptr, master.m, &x, &y, (int16)range, (int16)range, 1)) {
+		x = master.x;
+		y = master.y;
+	}
+	unit_stop_attack(&sd);
+	ab.target_id = 0;
+	ab.next_teleport = tick + 3000;
+	ab.master_away_since = 0;
+	if (pc_issit(&sd)) {
+		ab_stand(sd);
+		ab.sat_by_ab = false;
+	}
+	return pc_setpos(&sd, mapdata->index, x, y, CLR_TELEPORT) == SETPOS_OK;
+}
+
+/// Same map: walk to the master, teleport when he cannot be reached on foot. @return true if we moved / are moving
+static bool ab_follow_move(map_session_data& sd, s_autobattle& ab, map_session_data& master, int32 range, t_tick tick) {
+	if (pc_issit(&sd)) {
+		ab_stand(sd);
+		ab.sat_by_ab = false;
+	}
+	if (unit_is_walking(&sd) && DIFF_TICK(tick, ab.next_follow) < 0)
+		return true;
+	ab.next_follow = tick + 1000;
+	if (unit_walktobl(&sd, &master, range, 0))
+		return true;
+	// no path (wall, other side of a river...): teleport when allowed
+	map_data* mapdata = map_getmapdata(sd.m);
+	if (battle_config.autobattle_follow_teleport && ab.follow_warp && ab_same_party(sd, master) && mapdata != nullptr
+		&& !mapdata->getMapFlag(MF_NOTELEPORT) && DIFF_TICK(tick, ab.next_teleport) >= 0)
+		return ab_follow_jump(sd, ab, master, range, tick);
+	return false;
+}
+
+/// While the master fights: step back to about combat_dist cells, on the side away from his target
+static void ab_follow_step_back(map_session_data& sd, s_autobattle& ab, map_session_data& master, t_tick tick) {
+	if (unit_is_walking(&sd) || DIFF_TICK(tick, ab.next_follow) < 0)
+		return;
+	ab.next_follow = tick + 1500;
+	block_list* foe = master.ud.target ? map_id2bl(master.ud.target) : nullptr;
+	int32 dx, dy;
+	if (foe != nullptr && foe->m == master.m) { // away from the monster, behind the master
+		dx = master.x - foe->x;
+		dy = master.y - foe->y;
+	} else { // away from the master, keeping our side
+		dx = sd.x - master.x;
+		dy = sd.y - master.y;
+	}
+	if (dx == 0 && dy == 0)
+		dx = 1;
+	int32 len = std::max(std::abs(dx), std::abs(dy));
+	int32 r = ab.combat_dist;
+	map_data* mapdata = map_getmapdata(sd.m);
+	if (mapdata == nullptr)
+		return;
+	for (int32 i = 0; i < 6; i++) { // a few cells around the ideal spot
+		int32 x = master.x + dx * r / len + (i ? rnd_value<int32>(-2, 2) : 0);
+		int32 y = master.y + dy * r / len + (i ? rnd_value<int32>(-2, 2) : 0);
+		if (x < 1 || y < 1 || x >= mapdata->xs - 1 || y >= mapdata->ys - 1)
+			continue;
+		if (!map_getcell(sd.m, x, y, CELL_CHKPASS) || map_getcell(sd.m, x, y, CELL_CHKNPC) || !unit_can_reach_pos(&sd, x, y, 0))
+			continue;
+		if (unit_walktoxy(&sd, (int16)x, (int16)y, 0))
+			return;
+	}
+}
+
+/// Follow / support mode: stay near the master (teleport / warp after him when allowed), heal and buff the master and
+/// the party, keep a safe distance while the master fights, optionally fight back.
 static void ab_follow_tick(map_session_data& sd, s_autobattle& ab, t_tick tick) {
 	if (ab.follow_mode == ABFM_PARTY && !sd.status.party_id) {
 		ab_stop(sd, "you left the party.", "\u0E04\u0E38\u0E13\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E1B\u0E32\u0E23\u0E4C\u0E15\u0E35\u0E49\u0E41\u0E25\u0E49\u0E27");
@@ -1283,33 +1403,62 @@ static void ab_follow_tick(map_session_data& sd, s_autobattle& ab, t_tick tick) 
 	bool self_leader = (ab.follow_mode == ABFM_PARTY && master == &sd);
 	if (self_leader)
 		master = nullptr; // we lead the party: just support whoever is around
-	bool present = master != nullptr && master->prev != nullptr && master->m == sd.m && !master->state.warping;
+	bool online = master != nullptr && master->prev != nullptr && !master->state.warping && !master->state.changemap;
+	bool present = online && master->m == sd.m;
 	ab.follow_bl = present ? master->id : 0;
+
+	// ---- master on another map: warp after him (same party only)
+	if (online && !present) {
+		if (!ab.master_away_since)
+			ab.master_away_since = tick;
+		bool can_warp = battle_config.autobattle_follow_warp && ab.follow_warp
+			&& ab_same_party(sd, *master)
+			&& !sd.sc.getSCE(SC_JAILED) && ab_follow_can_enter(sd, master->m);
+		if (can_warp && DIFF_TICK(tick, ab.master_away_since) >= battle_config.autobattle_follow_warp_delay
+			&& DIFF_TICK(tick, ab.next_teleport) >= 0) {
+			if (!ab_quiet)
+				ab_msg(sd, "Warping to %s.", "\u0E27\u0E32\u0E23\u0E4C\u0E1B\u0E15\u0E32\u0E21 %s", master->status.name);
+			if (ab_follow_jump(sd, ab, *master, ab.follow_dist, tick)) {
+				ab.follow_lost = 0;
+				return;
+			}
+		}
+	} else
+		ab.master_away_since = 0;
 
 	if (!present && !self_leader) {
 		if (!ab.follow_lost)
 			ab.follow_lost = tick;
 		else if (DIFF_TICK(tick, ab.follow_lost) > (t_tick)battle_config.autobattle_follow_timeout * 1000) {
-			ab_stop(sd, "the player you follow is gone (offline / another map).", "\u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E1C\u0E39\u0E49\u0E40\u0E25\u0E48\u0E19\u0E17\u0E35\u0E48\u0E15\u0E34\u0E14\u0E15\u0E32\u0E21 (\u0E2D\u0E2D\u0E1F\u0E44\u0E25\u0E19\u0E4C / \u0E2D\u0E22\u0E39\u0E48\u0E04\u0E19\u0E25\u0E30\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48)");
+			ab_stop(sd, "the player you follow is gone (offline / a map you cannot follow to).", "\u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E1C\u0E39\u0E49\u0E40\u0E25\u0E48\u0E19\u0E17\u0E35\u0E48\u0E15\u0E34\u0E14\u0E15\u0E32\u0E21 (\u0E2D\u0E2D\u0E1F\u0E44\u0E25\u0E19\u0E4C / \u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E17\u0E35\u0E48\u0E15\u0E32\u0E21\u0E44\u0E1B\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49)");
 			return;
 		}
 	} else
 		ab.follow_lost = 0;
 
 	int32 dist = present ? (int32)distance_bl(&sd, master) : 0;
-	bool far = present && dist > ab.follow_dist;
+	bool fighting = false;
+	if (present) {
+		if (ab_master_fighting(*master))
+			ab.master_fight_tick = tick;
+		fighting = ab.master_fight_tick && DIFF_TICK(tick, ab.master_fight_tick) < 3000;
+	}
+	int32 want = fighting ? ab.combat_dist : ab.follow_dist;
 
-	// Far away (out of healing range): catch up first
-	if (present && dist > 9) {
-		if (pc_issit(&sd)) {
-			ab_stand(sd);
-			ab.sat_by_ab = false;
+	if (present) {
+		map_data* mapdata = map_getmapdata(sd.m);
+		bool can_tele = battle_config.autobattle_follow_teleport && ab.follow_warp && ab_same_party(sd, *master) && mapdata != nullptr
+			&& !mapdata->getMapFlag(MF_NOTELEPORT) && DIFF_TICK(tick, ab.next_teleport) >= 0;
+		// Out of sight (the master used a Fly Wing / Teleport...): teleport next to him
+		if (dist > AREA_SIZE && can_tele) {
+			ab_follow_jump(sd, ab, *master, want, tick);
+			return;
 		}
-		if (!unit_is_walking(&sd) || DIFF_TICK(tick, ab.next_follow) >= 0) {
-			ab.next_follow = tick + 1000;
-			unit_walktobl(&sd, master, ab.follow_dist, 0);
+		// Out of healing range: catch up first
+		if (dist > 9) {
+			ab_follow_move(sd, ab, *master, want, tick);
+			return;
 		}
-		return;
 	}
 
 	if (ab_support(sd, ab, tick))
@@ -1329,20 +1478,20 @@ static void ab_follow_tick(map_session_data& sd, s_autobattle& ab, t_tick tick) 
 		}
 	}
 
-	if (far) {
-		if (pc_issit(&sd)) {
-			ab_stand(sd);
-			ab.sat_by_ab = false;
-		}
-		if (!unit_is_walking(&sd) || DIFF_TICK(tick, ab.next_follow) >= 0) {
-			ab.next_follow = tick + 1000;
-			unit_walktobl(&sd, master, ab.follow_dist, 0);
-		}
+	if (!present)
+		return;
+	if (dist > want + 1) {
+		ab_follow_move(sd, ab, *master, want, tick);
 		return;
 	}
-
-	// Close to the master and nothing to do: rest when allowed
-	if (!present || !unit_is_walking(master))
+	if (fighting) {
+		// too close to the fight: stand back and support from a distance
+		if (dist < std::max(2, ab.combat_dist - 2))
+			ab_follow_step_back(sd, ab, *master, tick);
+		return;
+	}
+	// Close to the master and nothing to do: rest when he is not moving
+	if (!unit_is_walking(master))
 		ab_rest(sd, ab, tick);
 }
 
@@ -1529,7 +1678,6 @@ static int32 ab_count_mobs_sub(block_list* bl, va_list ap) {
 	return 0;
 }
 
-static bool ab_quiet = false; ///< suppress informational output (used by the NPC dialog)
 
 void autobattle_list_map_mobs(map_session_data& sd) {
 	auto ab = autobattle_get(sd);
@@ -1675,6 +1823,7 @@ void autobattle_status(map_session_data& sd) {
 	{
 		const char* fm_en = ab->follow_mode == ABFM_MASTER ? "follow player" : ab->follow_mode == ABFM_PARTY ? "follow party leader" : "off";
 		const char* fm_th = ab->follow_mode == ABFM_MASTER ? "\u0E15\u0E34\u0E14\u0E15\u0E32\u0E21\u0E1C\u0E39\u0E49\u0E40\u0E25\u0E48\u0E19" : ab->follow_mode == ABFM_PARTY ? "\u0E15\u0E34\u0E14\u0E15\u0E32\u0E21\u0E2B\u0E31\u0E27\u0E2B\u0E19\u0E49\u0E32\u0E1B\u0E32\u0E23\u0E4C\u0E15\u0E35\u0E49" : "\u0E1B\u0E34\u0E14";
+		ab_msg(sd, "  combat distance %d, warp after the master: %s", "  \u0E23\u0E30\u0E22\u0E30\u0E22\u0E37\u0E19\u0E15\u0E2D\u0E19\u0E21\u0E32\u0E2A\u0E40\u0E15\u0E2D\u0E23\u0E4C\u0E2A\u0E39\u0E49 %d \u0E0A\u0E48\u0E2D\u0E07, \u0E27\u0E32\u0E23\u0E4C\u0E1B\u0E15\u0E32\u0E21\u0E21\u0E32\u0E2A\u0E40\u0E15\u0E2D\u0E23\u0E4C: %s", ab->combat_dist, ab_onoff(ab->follow_warp).c_str());
 		ab_msg(sd, "[Follow] %s %s (distance %d)", "[\u0E15\u0E34\u0E14\u0E15\u0E32\u0E21] %s %s (\u0E23\u0E30\u0E22\u0E30 %d \u0E0A\u0E48\u0E2D\u0E07)", ab_pick(fm_en, fm_th).c_str(),
 			ab->follow_mode == ABFM_MASTER ? ab->follow_name.c_str() : "", ab->follow_dist);
 		ab_show_slots(sd, "  Buffs for others:", "  \u0E1A\u0E31\u0E1E\u0E43\u0E2B\u0E49\u0E1C\u0E39\u0E49\u0E2D\u0E37\u0E48\u0E19:", ab->pbuffs, AB_MAX_PBUFF_SLOTS);
@@ -1753,6 +1902,8 @@ int64 autobattle_info(map_session_data& sd, const char* key, int32 a, int32 b) {
 	}
 	if (k == "follow") return ab->follow_mode;
 	if (k == "fdist") return ab->follow_dist;
+	if (k == "fcombat") return ab->combat_dist;
+	if (k == "fwarp") return ab->follow_warp;
 	if (k == "fmaster") return ab->follow_char_id;
 	if (k == "fonline") return ab->follow_char_id && map_charid2sd(ab->follow_char_id) != nullptr;
 	if (k == "passleft") return ab_pass_left(sd);
@@ -1823,7 +1974,8 @@ static const char* ab_help_en[] = {
 	"restock <on|off> | restock +<item> <amount> / -<item> / reset | restock min <n>",
 	"safety hp <% 0=off> | safety item <item|off> | safety player <on|off> | safety weight <on|off> [%]",
 	"safety weightwarp <on|off> | safety noitem <on|off> | safety idle <sec 0=off> | safety mvp <on|off> | safety mini <on|off>",
-	"follow master <name> | follow party | follow off | follow dist <1-10> | pbuff <slot 1-8> <skill> [lv] | pbuff clear <slot|all>",
+	"follow master <name> | follow party | follow off | follow dist <1-10> | follow combat <2-9> | follow warp <on|off>",
+	"pbuff <slot 1-8> <skill> [lv] | pbuff clear <slot|all>",
 };
 
 static const char* ab_help_th[] = {
@@ -2151,7 +2303,7 @@ bool autobattle_command(map_session_data& sd, const char* message, bool quiet) {
 	}
 	else if (c == "follow") {
 		std::string a = arg(1);
-		if (ab->running) {
+		if (ab->running && (a == "off" || a == "party" || a == "master")) {
 			ab_msg(sd, "Stop Auto Battle first.", "\u0E01\u0E23\u0E38\u0E13\u0E32\u0E2B\u0E22\u0E38\u0E14 Auto Battle \u0E01\u0E48\u0E2D\u0E19");
 			return false;
 		}
@@ -2185,7 +2337,13 @@ bool autobattle_command(map_session_data& sd, const char* message, bool quiet) {
 			int32 v = atoi(arg(2).c_str());
 			if (v < 1 || v > 10) return ab_range_err(sd, 1, 10);
 			ab->follow_dist = (uint8)v;
-		} else { help(); return false; }
+		} else if (a == "combat") {
+			int32 v = atoi(arg(2).c_str());
+			if (v < 2 || v > 9) return ab_range_err(sd, 2, 9);
+			ab->combat_dist = (uint8)v;
+		} else if (a == "warp" && ab_parse_onoff(arg(2), b))
+			ab->follow_warp = b;
+		else { help(); return false; }
 	}
 	else if (c == "safety") {
 		std::string a = arg(1);
