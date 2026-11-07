@@ -26,7 +26,9 @@
 | NPC custom | `npc/custom/*.txt` (เปิดใช้ใน `npc/scripts_custom.conf`) |
 | ระบบที่ทำแล้ว | `autobattle.txt`, `race_system.txt` (@race), `vip_manager.txt`, `hat_effect_viewer.txt`, `hat_effect_mixer.txt`, `warper.txt`, `jobmaster.txt`, `woe_controller.txt` |
 | Database (YAML) | `db/pre-re/*.yml` (ข้อมูลหลัก), `db/import/*.yml` (override) |
-| Custom item IDs | ช่วง **325xx** ใน `db/pre-re/item_db_usable.yml` (32500 Auto Battle Pass, 32501–32503 Race, 32510–32513 VIP Ticket) |
+| Custom item IDs | ช่วง **325xx** ใน `db/pre-re/item_db_usable.yml` (32500 Auto Battle Pass (ไอเทมเช่า), 32501–32503 Race, 32510–32513 VIP Ticket, 32520–32522 Auto Battle Pass Box) |
+| Cash Shop | `db/import/item_cash.yml` + NPC `RAE_CashShop` ใน `vip_manager.txt` (ราคาต้องตรงกัน) — `doc/rae/systems/cash_shop.md` |
+| จำกัด client ต่อ IP | `src/map/client_limit.cpp`, GM `@clwhite` (`npc/custom/client_limit.txt`) — `doc/rae/systems/client_limit.md` |
 | Config ส่วนตัวของเซิร์ฟ | `conf/import/` (gitignored — รหัสผ่าน DB, IP อยู่ที่นี่) |
 | ข้อความภาษาไทย | `conf/msg_conf/map_msg_tha.conf` |
 | SQL | `sql-files/` (`main.sql`, `logs.sql`, `web.sql`, `upgrades/`) |

@@ -88698,32 +88698,32 @@ Body:
     Type: Usable
     Weight: 10
     Script: |
-      vip_time 1440;
-      dispbottom "VIP +1 day(s) added.";
+      // rA-E: see F_VIPTicket in npc/custom/vip_manager.txt
+      callfunc "F_VIPTicket", 1;
   - Id: 32511
     AegisName: VIP_Ticket_5D
     Name: VIP Ticket (5 Day)
     Type: Usable
     Weight: 10
     Script: |
-      vip_time 7200;
-      dispbottom "VIP +5 day(s) added.";
+      // rA-E: see F_VIPTicket in npc/custom/vip_manager.txt
+      callfunc "F_VIPTicket", 5;
   - Id: 32512
     AegisName: VIP_Ticket_15D
     Name: VIP Ticket (15 Day)
     Type: Usable
     Weight: 10
     Script: |
-      vip_time 21600;
-      dispbottom "VIP +15 day(s) added.";
+      // rA-E: see F_VIPTicket in npc/custom/vip_manager.txt
+      callfunc "F_VIPTicket", 15;
   - Id: 32513
     AegisName: VIP_Ticket_30D
     Name: VIP Ticket (30 Day)
     Type: Usable
     Weight: 10
     Script: |
-      vip_time 43200;
-      dispbottom "VIP +30 day(s) added.";
+      // rA-E: see F_VIPTicket in npc/custom/vip_manager.txt
+      callfunc "F_VIPTicket", 30;
   - Id: 32503
     AegisName: Race_Book
     Name: Race Book
@@ -88743,3 +88743,30 @@ Body:
     Script: |
       // item scripts cannot keep a dialog open: open the menu from a real NPC event right after
       addtimer 100, "RaceSystem::OnOpenItem";
+  - Id: 32520
+    AegisName: Auto_Battle_Box_1D
+    Name: Auto Battle Pass Box (1 Day)
+    Type: Usable
+    Buy: 0
+    Weight: 10
+    Script: |
+      // rA-E: adds 1 day(s) to the Auto Battle Pass (rental item 32500), see npc/custom/autobattle.txt
+      callfunc "F_ABPassBox", 1, 32520;
+  - Id: 32521
+    AegisName: Auto_Battle_Box_3D
+    Name: Auto Battle Pass Box (3 Days)
+    Type: Usable
+    Buy: 0
+    Weight: 10
+    Script: |
+      // rA-E: adds 3 day(s) to the Auto Battle Pass (rental item 32500), see npc/custom/autobattle.txt
+      callfunc "F_ABPassBox", 3, 32521;
+  - Id: 32522
+    AegisName: Auto_Battle_Box_7D
+    Name: Auto Battle Pass Box (7 Days)
+    Type: Usable
+    Buy: 0
+    Weight: 10
+    Script: |
+      // rA-E: adds 7 day(s) to the Auto Battle Pass (rental item 32500), see npc/custom/autobattle.txt
+      callfunc "F_ABPassBox", 7, 32522;

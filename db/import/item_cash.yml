@@ -33,3 +33,23 @@ Header:
   Version: 1
 
 Body:
+# rA-E: VIP Tickets and Auto Battle Pass Boxes (also sold by the RAE_CashShop NPC in npc/custom/vip_manager.txt).
+# Keep these prices the same as in that NPC. Price list and reasoning: doc/rae/systems/cash_shop.md
+  - Tab: Hot
+    Items:
+      - Item: VIP_Ticket_1D
+        Price: 19
+      - Item: VIP_Ticket_5D
+        Price: 79
+      - Item: VIP_Ticket_15D
+        Price: 199
+      - Item: VIP_Ticket_30D
+        Price: 299
+  - Tab: New
+    Items:
+      - Item: Auto_Battle_Box_1D
+        Price: 15
+      - Item: Auto_Battle_Box_3D
+        Price: 39
+      - Item: Auto_Battle_Box_7D
+        Price: 79

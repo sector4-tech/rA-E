@@ -1,0 +1,95 @@
+//===== rAthena Script =======================================
+//= Client Limit - IP whitelist (Thai) - rA-E custom
+//===== Description: =========================================
+//= The map-server allows at most max_clients_per_ip game clients per IP
+//= (conf/battle/feature.conf, src/map/client_limit.cpp).
+//= Internet cafes put every PC behind ONE IP address, so their IP can be
+//= added to the whitelist below (no limit for that IP).
+//= GM command (group level 99):
+//=   @clwhite                 list the whitelist
+//=   @clwhite add <ip>        add an IP          @clwhite del <ip>   remove an IP
+//=   @clwhite me              add your own current IP
+//= The list is kept in the permanent server array $cl_white$[] (max 128).
+//= ** SAVE AS TIS-620 / cp874 ** (Thai client)
+//============================================================
+
+-	script	ClientLimit	-1,{
+	end;
+
+OnInit:
+	bindatcmd "clwhite", strnpcinfo(3) + "::OnCmd", 99, 99;
+	end;
+
+OnCmd:
+	.@sub$ = (.@atcmd_numparameters >= 1) ? .@atcmd_parameters$[0] : "";
+	.@ip$ = (.@atcmd_numparameters >= 2) ? .@atcmd_parameters$[1] : "";
+	if (.@sub$ == "me") {
+		.@sub$ = "add";
+		.@ip$ = getcharip();
+	}
+	if (.@sub$ == "add") {
+		if (!callsub(L_ValidIP, .@ip$)) {
+			dispbottom "[Client Limit] รูปแบบ IP ไม่ถูกต้อง เช่น @clwhite add 203.0.113.10";
+			end;
+		}
+		.@free = -1;
+		for (.@i = 0; .@i < 128; .@i++) {
+			if ($cl_white$[.@i] == .@ip$) {
+				dispbottom "[Client Limit] IP " + .@ip$ + " อยู่ในรายการแล้ว";
+				end;
+			}
+			if (.@free < 0 && $cl_white$[.@i] == "")
+				.@free = .@i;
+		}
+		if (.@free < 0) {
+			dispbottom "[Client Limit] รายการเต็มแล้ว (128 IP)";
+			end;
+		}
+		$cl_white$[.@free] = .@ip$;
+		logmes "Client Limit: whitelist add " + .@ip$;
+		dispbottom "[Client Limit] เพิ่ม " + .@ip$ + " แล้ว (IP นี้เปิดเกมได้ไม่จำกัด)";
+		end;
+	}
+	if (.@sub$ == "del") {
+		for (.@i = 0; .@i < 128; .@i++) {
+			if ($cl_white$[.@i] == .@ip$ && .@ip$ != "") {
+				$cl_white$[.@i] = "";
+				logmes "Client Limit: whitelist del " + .@ip$;
+				dispbottom "[Client Limit] ลบ " + .@ip$ + " แล้ว";
+				end;
+			}
+		}
+		dispbottom "[Client Limit] ไม่พบ IP " + .@ip$ + " ในรายการ";
+		end;
+	}
+	dispbottom "[Client Limit] เปิดเกมได้สูงสุด " + getbattleflag("max_clients_per_ip") + " หน้าต่างต่อ IP (0 = ไม่จำกัด)";
+	dispbottom "[Client Limit] IP ที่ได้รับยกเว้น:";
+	.@n = 0;
+	for (.@i = 0; .@i < 128; .@i++) {
+		if ($cl_white$[.@i] != "") {
+			dispbottom "  - " + $cl_white$[.@i];
+			.@n++;
+		}
+	}
+	if (!.@n)
+		dispbottom "  (ไม่มี)";
+	dispbottom "ใช้: @clwhite add <ip> | @clwhite del <ip> | @clwhite me";
+	end;
+
+// very small IPv4 check: 4 numbers 0-255 separated by dots
+L_ValidIP:
+	.@s$ = getarg(0);
+	if (.@s$ == "")
+		return 0;
+	explode(.@part$, .@s$, ".");
+	if (getarraysize(.@part$) != 4)
+		return 0;
+	for (.@i = 0; .@i < 4; .@i++) {
+		if (.@part$[.@i] == "" || getstrlen(.@part$[.@i]) > 3)
+			return 0;
+		.@v = atoi(.@part$[.@i]);
+		if (.@v < 0 || .@v > 255 || ("" + .@v) != .@part$[.@i])
+			return 0;
+	}
+	return 1;
+}

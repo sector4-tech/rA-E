@@ -45,6 +45,7 @@
 #include "mapreg.hpp"
 #include "mercenary.hpp"
 #include "autobattle.hpp"
+#include "client_limit.hpp"
 #include "mob.hpp"
 #include "navi.hpp"
 #include "npc.hpp"
@@ -5438,6 +5439,7 @@ bool MapServer::initialize( int32 argc, char *argv[] ){
 	do_init_mob();
 	do_init_pc();
 	do_init_autobattle();
+	do_init_client_limit();
 	do_init_status();
 	do_init_party();
 	do_init_guild();

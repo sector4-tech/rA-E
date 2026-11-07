@@ -25,6 +25,7 @@ class map_session_data;
 #define AB_MAX_LOOT_IDS 30
 #define AB_MAX_RESTOCK 8
 #define AB_MAX_BUFFITEMS 6
+#define AB_MAX_PBUFF_SLOTS 8 ///< buffs cast on the master / party members (follow / support mode)
 
 /// Extra condition for using an attack skill
 enum e_ab_cond : uint8 {
@@ -59,6 +60,12 @@ struct s_ab_buffitem {
 	t_itemid nameid = 0; ///< 0 = empty
 	uint16 interval = 600; ///< seconds
 	t_tick next_use = 0; ///< runtime only
+};
+
+enum e_ab_follow : uint8 {
+	ABFM_OFF = 0,
+	ABFM_MASTER = 1, ///< follow one player (by character), also outside the party
+	ABFM_PARTY = 2, ///< follow the party leader
 };
 
 enum e_ab_phase : uint8 {
@@ -140,6 +147,16 @@ struct s_autobattle {
 	bool flee_mvp = false; ///< escape (flee item) when an MVP monster shows up
 	bool flee_mini = false; ///< escape (flee item) when a mini boss shows up
 	uint16 idle_seconds = 90; ///< no target for this long -> use flee_item (0 = disabled)
+
+	// Follow / support mode (priest following a master or the party leader, healing and buffing them)
+	uint8 follow_mode = ABFM_OFF; ///< e_ab_follow
+	uint8 follow_dist = 3; ///< stay within this many cells of the master
+	uint32 follow_char_id = 0; ///< master (ABFM_MASTER)
+	std::string follow_name; ///< master name (display only)
+	s_ab_skill pbuffs[AB_MAX_PBUFF_SLOTS]; ///< buffs cast on the master / party members
+	int32 follow_bl = 0; ///< runtime: block id of the master found this tick (0 = none)
+	t_tick follow_lost = 0; ///< runtime: since when the master is missing (0 = present)
+	t_tick next_follow = 0; ///< runtime
 };
 
 // ---- Public API (can be called from atcommands, scripts or a client packet handler) ----

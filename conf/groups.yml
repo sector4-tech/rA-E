@@ -83,7 +83,7 @@ Body:
       refresh: true
       noask: true
       noks: true
-      autobattle: true
+      # autobattle: only through the Auto Battle Pass item (rA-E), see the Admin group
       autoloot: true
       alootid: true
       autoloottype: true

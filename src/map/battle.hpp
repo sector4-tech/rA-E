@@ -693,6 +693,10 @@ struct Battle_Config
 	int32 autobattle_lang;
 	int32 autobattle_warp_return;
 	int32 autobattle_hat_effect;
+	int32 autobattle_pass_item;
+	int32 autobattle_follow_timeout;
+	int32 max_clients_per_ip;
+	int32 max_clients_kick_delay;
 	int32 feature_petevolution;
 	int32 feature_pet_autofeed;
 	int32 feature_pet_autofeed_rate;

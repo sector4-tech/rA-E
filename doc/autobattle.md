@@ -1,7 +1,42 @@
 # Auto Battle (server side)
 
-Command: `@autobattle` (alias `@ab`). Permission: `autobattle` (conf/groups.yml).
+Command: `@autobattle` (alias `@ab`) - **GM only** (Admin group has `all_commands`). Players use the pass item.
 Config: `conf/battle/feature.conf` (`autobattle_*`).
+
+## Auto Battle Pass (rA-E)
+* The **Auto Battle Pass** (id 32500) is a **rental item**: the client shows the time left, the server deletes it
+  when it runs out and Auto Battle stops by itself (`autobattle_pass_item`).
+* The pass only comes out of the **Auto Battle Pass Boxes** (tradeable, sold in the Cash Shop / given at events):
+
+  | Box | Id | AegisName | Cash price |
+  |---|---|---|---|
+  | 1 day | 32520 | `Auto_Battle_Box_1D` | 15 |
+  | 3 days | 32521 | `Auto_Battle_Box_3D` | 39 |
+  | 7 days | 32522 | `Auto_Battle_Box_7D` | 79 |
+
+  Opening a box adds its days to the pass the player already has (`F_ABPassBox` / `F_ABPassAdd` in
+  `npc/custom/autobattle.txt`). The pass can hold at most 60 days; a box that would go over is given back.
+* New accounts get 1 day once from **Auto Battle Guide** next to the pre-renewal start point
+  (`new_1-1` .. `new_5-1`, 57,114). Account variable `#AB_NEWBIE`. Days: `.newbie_days` in `AutoBattleUI`.
+* A permanent pass (old system / `@item 32500`) is changed into a 1 day rental pass at login.
+* The pass is the only way for players to open the menu and start / stop Auto Battle.
+
+## Follow / support mode (rA-E)
+For support classes (Priest...): the character follows a **master** (any online player, also outside the party)
+or the **party leader**, heals / resurrects and buffs the master, itself and the party members nearby, and does
+not hunt. With "fight back" on it attacks only monsters that attack it or the master.
+* Menu: 4. ซัพพอร์ต / ฮีล / ติดตาม. Commands: `follow master <name>`, `follow party`, `follow off`,
+  `follow dist <1-10>`, `pbuff <slot 1-8> <skill> [lv]`, `pbuff clear <slot|all>`.
+* Heal skills (`support`, e.g. Heal, Resurrection) are used on the lowest HP % player under the threshold;
+  Resurrection is used on dead players first. Buffs for others (`pbuff`, e.g. Blessing, Increase AGI, Kyrie
+  Eleison, Impositio Manus) are re-cast on everybody who does not have them.
+* Never warps after the master: when the master is offline / on another map for `autobattle_follow_timeout`
+  seconds (default 60), Auto Battle stops. Restock is not used in follow mode.
+
+## Map rules (rA-E)
+Auto Battle never warps a character out of a map where a Butterfly Wing is not allowed (`noreturn`, `nowarp`,
+instances) and never warps it into `nowarpto` maps, instances or PvP/WoE/BG maps (restock, weight warp,
+automatic return to the hunting map).
 
 ## Starting / stopping (item based)
 * Use the **Auto Battle Pass** (`Auto_Battle_Pass`, id 32500, not consumed) to start or stop Auto Battle.
@@ -16,8 +51,7 @@ Config: `conf/battle/feature.conf` (`autobattle_*`).
   and status are in `db/re` and `db/pre-re` (`item_db_usable.yml`, `status.yml`).
 
 ## Setup dialog (no client changes needed)
-* Type `@ab` (no arguments) to open the Thai setup dialog anywhere, or talk to **Auto Battle Manager**
-  (prontera,155,181). `@ab help` lists the chat commands.
+* Players: use the Auto Battle Pass. GMs: `@ab` (no arguments) opens the same dialog, `@ab help` lists the chat commands.
 * The dialog is `npc/custom/autobattle.txt` (enabled in `npc/scripts_custom.conf`).
   **Save that file as TIS-620 / cp874.**
 * The dialog never touches variables directly. It uses three script commands:
@@ -28,13 +62,14 @@ Config: `conf/battle/feature.conf` (`autobattle_*`).
 
 ## Commands
 ```
-(no argument) | menu | start | stop | toggle | status | mobs | reset | skills <attack|buff|support> | mapmobs
+(no argument) | menu | start | stop | toggle | status | mobs | reset | skills <attack|buff|support|pbuff> | mapmobs
 all <on|off> | attack <on|off> | fightback <on|off>
 mob +<id|name> / -<id|name> / reset            blacklist +<id|name> / -<id|name> / reset
 skill <slot 1-16> <skill id|name> [lv] | skill clear <slot|all> | skill cond <slot> <always|above|below> [%]
 hp|sp <item id|name|off> [%] | pct <hp|sp> <%> | sit <on|off> | sit hp|sp <sit%> <stand%>
 buff <slot 1-8> <skill> [lv] | buff clear <slot|all> | buffitem <slot 1-6> <item> [seconds] | buffitem clear <slot|all>
 support <slot 1-4> <skill> [lv] | support clear <slot|all> | support hp <%>
+follow master <name> | follow party | follow off | follow dist <1-10> | pbuff <slot 1-8> <skill> [lv] | pbuff clear <slot|all>
 loot <on|off> | loot range <1-14> | loot +<item> / -<item> / reset
 restock <on|off> | restock +<item> <amount> / -<item> / reset | restock min <n>
 safety hp <%> | safety item <item|off> | safety player <on|off> | safety weight <on|off> [%]
@@ -52,7 +87,8 @@ Item/monster/skill names: use the id or the Aegis name (underscores instead of s
 
 ## Saved data
 Settings are stored in permanent character variables (`ab_flags`, `ab_pct1..3`, `ab_atk[]`, `ab_atkc[]`,
-`ab_buff[]`, `ab_sup[]`, `ab_mob[]`, `ab_bl[]`, `ab_loot[]`, `ab_rsid[]`, `ab_rsamt[]`, `ab_bi[]`, `ab_biv[]`...)
+`ab_buff[]`, `ab_sup[]`, `ab_mob[]`, `ab_bl[]`, `ab_loot[]`, `ab_rsid[]`, `ab_rsamt[]`, `ab_bi[]`, `ab_biv[]`,
+`ab_follow`, `ab_fmaster`, `ab_fmname$`, `ab_pbuff[]`...)
 written with `pc_setregistry`, so they are saved to the `char_reg_num` table and survive relogging.
 
 ## Client UI
