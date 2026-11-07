@@ -50,8 +50,8 @@
 ```bash
 # CMake (แนะนำ)
 cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j"$(nproc)"
-# หรือแบบดั้งเดิม
-./configure --enable-prere=yes --enable-vip=yes && make clean && make server
+# หรือแบบดั้งเดิม (ไม่ต้องใส่ --enable-vip เพราะ src/config/core.hpp เปิด VIP_ENABLE ไว้แล้ว ใส่ซ้ำจะขึ้น warning "VIP_ENABLE redefined")
+./configure --enable-prere=yes && make clean && make server
 ./athena-start start | stop | restart       # เปิด/ปิดเซิร์ฟ
 ```
 - ก่อนบอกว่าเสร็จ: ต้อง **compile ผ่าน** และ map-server โหลด NPC/DB ไม่มี error/warning ใหม่
