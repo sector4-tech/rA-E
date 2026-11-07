@@ -4,8 +4,9 @@
 
 ## สิ่งที่มีแล้ว
 - ✅ Pre-Re + Hi-Class only + No Baby, PACKETVER 20260107
-- ✅ VIP (icon นับถอยหลัง, VIP Ticket 1/5/15/30 วัน)
-- ✅ Auto Battle (C++ `autobattle.cpp` + เมนูไทย `@ab`)
+- ✅ VIP (icon นับถอยหลัง, VIP Ticket 1/5/15/30 วัน) + Cash Shop (`RAE_CashShop`, item_cash.yml)
+- ✅ จำกัด 5 client ต่อ IP + whitelist ร้านเกม (`@clwhite`)
+- ✅ Auto Battle (C++ `autobattle.cpp` + เมนูไทย) ใช้ผ่าน Auto Battle Pass (ไอเทมเช่าจากกล่อง 1/3/7 วัน) + โหมดซัพพอร์ต/ติดตาม Master
 - ✅ Race System 10 เผ่า 3 ดาว 6 ช่อง (`@race`)
 - ✅ Hat Effect Viewer / Mixer, Warper, Job Master, WoE Controller, Healer, Stylist
 

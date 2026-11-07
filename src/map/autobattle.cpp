@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
 #include <map>
 #include <sstream>
 #include <string>
@@ -124,6 +125,41 @@ static void ab_ignore(s_autobattle& ab, int32 id, t_tick tick, t_tick duration) 
 	ab.ignore.emplace_back(id, tick + duration);
 }
 
+/// Seconds left on the Auto Battle Pass: -1 = no pass needed / permanent pass, 0 = no (valid) pass
+static int64 ab_pass_left(const map_session_data& sd) {
+	t_itemid pass = (t_itemid)battle_config.autobattle_pass_item;
+	if (!pass)
+		return -1;
+	int64 best = 0;
+	time_t now = time(nullptr);
+	for (int32 i = 0; i < MAX_INVENTORY; i++) {
+		const item& it = sd.inventory.u.items_inventory[i];
+		if (it.nameid != pass || it.amount <= 0)
+			continue;
+		if (it.expire_time == 0)
+			return -1;
+		int64 left = (int64)it.expire_time - (int64)now;
+		if (left > best)
+			best = left;
+	}
+	return best;
+}
+
+/// May Auto Battle warp the character away from map 'm' (restock / weight warp)? Same rule as a Butterfly Wing.
+static bool ab_can_leave(int16 m) {
+	map_data* mapdata = map_getmapdata(m);
+	return mapdata != nullptr && !mapdata->getMapFlag(MF_NORETURN) && !mapdata->getMapFlag(MF_NOWARP) && mapdata->instance_id <= 0;
+}
+
+/// May Auto Battle warp the character (back) into the map 'mapindex'? Never into instances, PvP/WoE/BG or "nowarpto" maps.
+static bool ab_can_enter(uint16 mapindex) {
+	int16 m = mapindex ? map_mapindex2mapid(mapindex) : -1;
+	if (m < 0)
+		return false;
+	map_data* mapdata = map_getmapdata(m);
+	return mapdata != nullptr && !mapdata->getMapFlag(MF_NOWARPTO) && mapdata->instance_id <= 0 && !map_flag_vs(m);
+}
+
 // ---------------------------------------------------------------------------------------------
 // Persistence
 //
@@ -226,6 +262,10 @@ void autobattle_save(map_session_data& sd) {
 		ab_set(sd, "ab_bi", i, ab.buff_items[i].nameid);
 		ab_set(sd, "ab_biv", i, ab.buff_items[i].nameid ? ab.buff_items[i].interval : 0);
 	}
+	ab_set(sd, "ab_follow", 0, (int64)ab.follow_mode | ((int64)ab.follow_dist << 8) | (1LL << 30));
+	ab_set(sd, "ab_fmaster", 0, ab.follow_char_id);
+	pc_setregistry_str(&sd, ab_key("ab_fmname$"), ab.follow_name.c_str());
+	ab_save_slots(sd, "ab_pbuff", nullptr, ab.pbuffs, AB_MAX_PBUFF_SLOTS);
 }
 
 static void ab_load(map_session_data& sd, s_autobattle& ab) {
@@ -306,6 +346,17 @@ static void ab_load(map_session_data& sd, s_autobattle& ab) {
 		if (ab.buff_items[i].nameid && iv > 0)
 			ab.buff_items[i].interval = (uint16)iv;
 	}
+	int64 fl = ab_get(sd, "ab_follow");
+	if (fl & (1LL << 30)) {
+		ab.follow_mode = (uint8)(fl & 0xFF);
+		ab.follow_dist = (uint8)((fl >> 8) & 0xFF);
+		if (ab.follow_mode > ABFM_PARTY) ab.follow_mode = ABFM_OFF;
+		if (ab.follow_dist < 1 || ab.follow_dist > 10) ab.follow_dist = 3;
+	}
+	ab.follow_char_id = (uint32)ab_get(sd, "ab_fmaster");
+	const char* fname = pc_readregistry_str(&sd, ab_key("ab_fmname$"));
+	ab.follow_name = fname ? fname : "";
+	ab_load_slots(sd, "ab_pbuff", nullptr, ab.pbuffs, AB_MAX_PBUFF_SLOTS);
 }
 
 std::shared_ptr<s_autobattle> autobattle_get(map_session_data& sd) {
@@ -502,6 +553,10 @@ bool autobattle_start(map_session_data& sd, bool from_item) {
 		ab_msg(sd, "Your data is still loading, please try again.", "\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E22\u0E31\u0E07\u0E42\u0E2B\u0E25\u0E14\u0E44\u0E21\u0E48\u0E40\u0E2A\u0E23\u0E47\u0E08 \u0E01\u0E23\u0E38\u0E13\u0E32\u0E25\u0E2D\u0E07\u0E43\u0E2B\u0E21\u0E48\u0E2D\u0E35\u0E01\u0E04\u0E23\u0E31\u0E49\u0E07");
 		return false;
 	}
+	if (ab_pass_left(sd) == 0) {
+		ab_msg(sd, "You need an Auto Battle Pass (open an Auto Battle Pass Box).", "\u0E15\u0E49\u0E2D\u0E07\u0E21\u0E35 Auto Battle Pass \u0E01\u0E48\u0E2D\u0E19 (\u0E44\u0E14\u0E49\u0E08\u0E32\u0E01\u0E01\u0E32\u0E23\u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E48\u0E2D\u0E07 Auto Battle Pass Box)");
+		return false;
+	}
 	if (battle_config.autobattle_item_only && !from_item) {
 		ab_msg(sd, "Use the Auto Battle item to start Auto Battle.", "\u0E01\u0E23\u0E38\u0E13\u0E32\u0E43\u0E0A\u0E49\u0E44\u0E2D\u0E40\u0E17\u0E21 Auto Battle \u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E40\u0E23\u0E34\u0E48\u0E21\u0E23\u0E30\u0E1A\u0E1A");
 		return false;
@@ -511,15 +566,23 @@ bool autobattle_start(map_session_data& sd, bool from_item) {
 		ab_msg(sd, "Auto Battle is already running.", "Auto Battle \u0E17\u0E33\u0E07\u0E32\u0E19\u0E2D\u0E22\u0E39\u0E48\u0E41\u0E25\u0E49\u0E27");
 		return false;
 	}
-	bool has_attack = ab->normal_attack;
+	bool has_attack = ab->normal_attack || ab->follow_mode != ABFM_OFF; // follow mode does not need to attack
 	for (const auto& sk : ab->attack)
 		if (sk.skill_id)
 			has_attack = true;
+	if (ab->follow_mode == ABFM_MASTER && !ab->follow_char_id) {
+		ab_msg(sd, "Choose the player to follow first.", "\u0E01\u0E23\u0E38\u0E13\u0E32\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E1C\u0E39\u0E49\u0E40\u0E25\u0E48\u0E19\u0E17\u0E35\u0E48\u0E08\u0E30\u0E15\u0E34\u0E14\u0E15\u0E32\u0E21\u0E01\u0E48\u0E2D\u0E19");
+		return false;
+	}
+	if (ab->follow_mode == ABFM_PARTY && !sd.status.party_id) {
+		ab_msg(sd, "Follow party: you are not in a party.", "\u0E42\u0E2B\u0E21\u0E14\u0E15\u0E34\u0E14\u0E15\u0E32\u0E21\u0E1B\u0E32\u0E23\u0E4C\u0E15\u0E35\u0E49: \u0E04\u0E38\u0E13\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E1B\u0E32\u0E23\u0E4C\u0E15\u0E35\u0E49");
+		return false;
+	}
 	if (!has_attack) {
 		ab_msg(sd, "Enable normal attack or add an attack skill first (type @ab).", "\u0E01\u0E23\u0E38\u0E13\u0E32\u0E40\u0E1B\u0E34\u0E14 '\u0E42\u0E08\u0E21\u0E15\u0E35\u0E18\u0E23\u0E23\u0E21\u0E14\u0E32' \u0E2B\u0E23\u0E37\u0E2D\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E2A\u0E01\u0E34\u0E25\u0E42\u0E08\u0E21\u0E15\u0E35\u0E01\u0E48\u0E2D\u0E19 (\u0E1E\u0E34\u0E21\u0E1E\u0E4C @ab)");
 		return false;
 	}
-	if (!ab->all_monsters && ab->mobs.empty() && !ab->fight_back) {
+	if (ab->follow_mode == ABFM_OFF && !ab->all_monsters && ab->mobs.empty() && !ab->fight_back) {
 		ab_msg(sd, "Select target monsters first (type @ab).", "\u0E01\u0E23\u0E38\u0E13\u0E32\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E21\u0E2D\u0E19\u0E2A\u0E40\u0E15\u0E2D\u0E23\u0E4C\u0E40\u0E1B\u0E49\u0E32\u0E2B\u0E21\u0E32\u0E22\u0E01\u0E48\u0E2D\u0E19 (\u0E1E\u0E34\u0E21\u0E1E\u0E4C @ab)");
 		return false;
 	}
@@ -535,6 +598,10 @@ bool autobattle_start(map_session_data& sd, bool from_item) {
 	ab->anchor_y = sd.y;
 	ab->hunt_mapindex = 0; // recorded by the first tick
 	ab->return_tries = 0;
+	ab->follow_bl = 0;
+	ab->follow_lost = 0;
+	ab->next_follow = 0;
+	for (auto& sk : ab->pbuffs) sk.next_try = 0;
 	ab->start_tick = ab->last_target_tick = gettick();
 	ab->next_roam = ab->next_hp_item = ab->next_sp_item = ab->next_flee_item = ab->next_boss_check = ab->next_sit_action = 0;
 	ab->next_restock_check = ab->start_tick + 3000;
@@ -572,6 +639,7 @@ static void ab_stop(map_session_data& sd, const char* en, const char* th) {
 	if (was_running)
 		ab->last_stop = en ? en : "stopped by the player";
 	ab->running = false;
+	ab->follow_bl = 0;
 	if (sd.sc.getSCE(SC_AUTOBATTLE))
 		status_change_end(&sd, SC_AUTOBATTLE);
 	ab_hat_effect(sd, false);
@@ -611,6 +679,8 @@ static int32 ab_count_players_sub(block_list* bl, va_list ap) {
 	int32* count = va_arg(ap, int32*);
 	map_session_data* other = (map_session_data*)bl;
 
+	if (me->autobattle && me->autobattle->follow_bl == other->id)
+		return 0; // the master we follow
 	if (other == me || other->state.vending || other->state.buyingstore || other->state.autotrade)
 		return 0;
 	if (me->status.party_id && other->status.party_id == me->status.party_id)
@@ -659,7 +729,7 @@ static bool ab_safety(map_session_data& sd, s_autobattle& ab, t_tick tick) {
 		}
 	}
 	if (ab.stop_on_weight && pc_getpercentweight(sd) >= ab.weight_pct && !ab.restock) {
-		if (ab.weight_warp) {
+		if (ab.weight_warp && ab_can_leave(sd.m)) {
 			ab_stop(sd, "you are carrying too much, returned to the save point.", "\u0E19\u0E49\u0E33\u0E2B\u0E19\u0E31\u0E01\u0E40\u0E01\u0E34\u0E19 \u0E40\u0E14\u0E34\u0E19\u0E17\u0E32\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E08\u0E38\u0E14\u0E40\u0E0B\u0E1F\u0E41\u0E25\u0E49\u0E27");
 			pc_setpos_savepoint(sd);
 		} else
@@ -793,29 +863,32 @@ static bool ab_buffs(map_session_data& sd, s_autobattle& ab, t_tick tick) {
 	return false;
 }
 
-struct ab_support_ctx {
-	map_session_data* self;
-	map_session_data* best;
-	int32 best_pct;
-	int32 threshold;
-};
-
-static int32 ab_support_sub(block_list* bl, va_list ap) {
-	ab_support_ctx* ctx = va_arg(ap, ab_support_ctx*);
-	map_session_data* psd = (map_session_data*)bl;
-
-	if (psd != ctx->self && (!ctx->self->status.party_id || psd->status.party_id != ctx->self->status.party_id))
-		return 0;
-	if (pc_isdead(psd) || !psd->battle_status.max_hp)
-		return 0;
-	int32 pct = (int32)((int64)psd->battle_status.hp * 100 / psd->battle_status.max_hp);
-	if (pct < ctx->threshold && pct < ctx->best_pct) {
-		ctx->best = psd;
-		ctx->best_pct = pct;
+/// Players that support / party buff skills may target, most important first:
+/// the master (also when not in the party), the character itself, then party members nearby on the same map.
+static void ab_support_targets(map_session_data& sd, s_autobattle& ab, std::vector<map_session_data*>& out) {
+	out.clear();
+	map_session_data* master = ab.follow_bl ? map_id2sd(ab.follow_bl) : nullptr;
+	if (master != nullptr && (master == &sd || master->m != sd.m || master->prev == nullptr || (int32)distance_bl(&sd, master) > AREA_SIZE))
+		master = nullptr;
+	if (master != nullptr)
+		out.push_back(master);
+	out.push_back(&sd);
+	if (!sd.status.party_id)
+		return;
+	party_data* p = party_search(sd.status.party_id);
+	if (p == nullptr)
+		return;
+	for (int32 i = 0; i < MAX_PARTY; i++) {
+		map_session_data* psd = p->data[i].sd;
+		if (psd == nullptr || psd == &sd || psd == master || psd->m != sd.m || psd->prev == nullptr)
+			continue;
+		if ((int32)distance_bl(&sd, psd) > AREA_SIZE)
+			continue;
+		out.push_back(psd);
 	}
-	return 0;
 }
 
+/// Healing / resurrection. @return true if a skill was used
 static bool ab_support(map_session_data& sd, s_autobattle& ab, t_tick tick) {
 	bool any = false;
 	for (const auto& sk : ab.support)
@@ -823,13 +896,69 @@ static bool ab_support(map_session_data& sd, s_autobattle& ab, t_tick tick) {
 	if (!any)
 		return false;
 
-	ab_support_ctx ctx = { &sd, nullptr, 101, ab.support_hp_pct };
-	map_foreachinrange(ab_support_sub, &sd, 9, BL_PC, &ctx);
-	if (!ctx.best)
+	std::vector<map_session_data*> targets;
+	ab_support_targets(sd, ab, targets);
+
+	// Resurrection first (when it is in the support list)
+	for (auto& sk : ab.support) {
+		if (sk.skill_id != ALL_RESURRECTION)
+			continue;
+		for (map_session_data* psd : targets)
+			if (psd != &sd && pc_isdead(psd) && ab_use_skill(sd, sk, psd, tick) == ABS_USED)
+				return true;
+	}
+
+	// Then the living player with the lowest HP % below the threshold
+	map_session_data* best = nullptr;
+	int32 best_pct = 101;
+	for (map_session_data* psd : targets) {
+		if (pc_isdead(psd) || !psd->battle_status.max_hp)
+			continue;
+		int32 pct = (int32)((int64)psd->battle_status.hp * 100 / psd->battle_status.max_hp);
+		if (pct < ab.support_hp_pct && pct < best_pct) {
+			best = psd;
+			best_pct = pct;
+		}
+	}
+	if (best == nullptr)
 		return false;
 	for (auto& sk : ab.support)
-		if (ab_use_skill(sd, sk, ctx.best, tick) == ABS_USED)
+		if (sk.skill_id && sk.skill_id != ALL_RESURRECTION && ab_use_skill(sd, sk, best, tick) == ABS_USED)
 			return true;
+	return false;
+}
+
+/// Buffs on the master / party members (Blessing, Increase AGI, Kyrie Eleison...), re-cast when they run out.
+/// @return true if a skill was used
+static bool ab_party_buffs(map_session_data& sd, s_autobattle& ab, t_tick tick) {
+	bool any = false;
+	for (const auto& sk : ab.pbuffs)
+		if (sk.skill_id) { any = true; break; }
+	if (!any || sd.state.warping)
+		return false;
+
+	std::vector<map_session_data*> targets;
+	ab_support_targets(sd, ab, targets);
+
+	for (auto& sk : ab.pbuffs) {
+		if (!sk.skill_id)
+			continue;
+		sc_type sct = skill_get_sc(sk.skill_id);
+		if (sct == SC_NONE)
+			continue;
+		for (map_session_data* psd : targets) {
+			if (pc_isdead(psd) || psd->sc.getSCE(sct))
+				continue;
+			e_ab_skill_result r = ab_use_skill(sd, sk, psd, tick);
+			if (r == ABS_USED) {
+				sk.next_try = tick + 1000; // the buff may be refused by the target (e.g. Quagmire): don't spam it
+				return true;
+			}
+			if (r == ABS_NO)
+				break; // not usable right now (SP, cooldown...): try the next skill
+			// ABS_TOOFAR: try the next player
+		}
+	}
 	return false;
 }
 
@@ -839,6 +968,8 @@ static bool ab_support(map_session_data& sd, s_autobattle& ab, t_tick tick) {
 
 static bool ab_mob_wanted(map_session_data& sd, s_autobattle& ab, const mob_data& md) {
 	bool attacks_us = md.target_id == sd.id;
+	if (ab.follow_mode != ABFM_OFF) // support mode: only fight back (for us or the master) when allowed
+		return ab.fight_back && (attacks_us || (ab.follow_bl && md.target_id == ab.follow_bl));
 	// "never attack" list: only fought when it attacks us
 	if (!attacks_us && std::find(ab.blacklist.begin(), ab.blacklist.end(), md.mob_id) != ab.blacklist.end())
 		return false;
@@ -1047,6 +1178,10 @@ static int32 ab_buy_items(map_session_data& sd, s_autobattle& ab) {
 
 static bool ab_restock(map_session_data& sd, s_autobattle& ab, t_tick tick) {
 	map_data* md = map_getmapdata(sd.m);
+	if (!ab_can_leave(sd.m) || !ab_can_enter(md ? md->index : 0)) {
+		ab_stop(sd, "restocking is not allowed on this map.", "\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E19\u0E35\u0E49\u0E44\u0E21\u0E48\u0E2D\u0E19\u0E38\u0E0D\u0E32\u0E15\u0E43\u0E2B\u0E49\u0E27\u0E32\u0E23\u0E4C\u0E1B\u0E44\u0E1B\u0E0B\u0E37\u0E49\u0E2D\u0E02\u0E2D\u0E07\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34");
+		return false;
+	}
 	ab.return_mapindex = md ? md->index : 0;
 	ab.return_x = sd.x;
 	ab.return_y = sd.y;
@@ -1123,6 +1258,94 @@ static void ab_combat(map_session_data& sd, s_autobattle& ab, mob_data& target, 
 // Main tick
 // ---------------------------------------------------------------------------------------------
 
+/// The player we follow right now (nullptr: none / we are the party leader ourselves)
+static map_session_data* ab_follow_master(map_session_data& sd, s_autobattle& ab) {
+	if (ab.follow_mode == ABFM_MASTER)
+		return ab.follow_char_id ? map_charid2sd(ab.follow_char_id) : nullptr;
+	if (ab.follow_mode == ABFM_PARTY && sd.status.party_id) {
+		party_data* p = party_search(sd.status.party_id);
+		if (p == nullptr)
+			return nullptr;
+		for (int32 i = 0; i < MAX_PARTY; i++)
+			if (p->party.member[i].leader)
+				return p->data[i].sd; // nullptr when the leader is offline
+	}
+	return nullptr;
+}
+
+/// Follow / support mode: stay close to the master, heal and buff the master and the party, optionally fight back.
+static void ab_follow_tick(map_session_data& sd, s_autobattle& ab, t_tick tick) {
+	if (ab.follow_mode == ABFM_PARTY && !sd.status.party_id) {
+		ab_stop(sd, "you left the party.", "\u0E04\u0E38\u0E13\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E1B\u0E32\u0E23\u0E4C\u0E15\u0E35\u0E49\u0E41\u0E25\u0E49\u0E27");
+		return;
+	}
+	map_session_data* master = ab_follow_master(sd, ab);
+	bool self_leader = (ab.follow_mode == ABFM_PARTY && master == &sd);
+	if (self_leader)
+		master = nullptr; // we lead the party: just support whoever is around
+	bool present = master != nullptr && master->prev != nullptr && master->m == sd.m && !master->state.warping;
+	ab.follow_bl = present ? master->id : 0;
+
+	if (!present && !self_leader) {
+		if (!ab.follow_lost)
+			ab.follow_lost = tick;
+		else if (DIFF_TICK(tick, ab.follow_lost) > (t_tick)battle_config.autobattle_follow_timeout * 1000) {
+			ab_stop(sd, "the player you follow is gone (offline / another map).", "\u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E1C\u0E39\u0E49\u0E40\u0E25\u0E48\u0E19\u0E17\u0E35\u0E48\u0E15\u0E34\u0E14\u0E15\u0E32\u0E21 (\u0E2D\u0E2D\u0E1F\u0E44\u0E25\u0E19\u0E4C / \u0E2D\u0E22\u0E39\u0E48\u0E04\u0E19\u0E25\u0E30\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48)");
+			return;
+		}
+	} else
+		ab.follow_lost = 0;
+
+	int32 dist = present ? (int32)distance_bl(&sd, master) : 0;
+	bool far = present && dist > ab.follow_dist;
+
+	// Far away (out of healing range): catch up first
+	if (present && dist > 9) {
+		if (pc_issit(&sd)) {
+			ab_stand(sd);
+			ab.sat_by_ab = false;
+		}
+		if (!unit_is_walking(&sd) || DIFF_TICK(tick, ab.next_follow) >= 0) {
+			ab.next_follow = tick + 1000;
+			unit_walktobl(&sd, master, ab.follow_dist, 0);
+		}
+		return;
+	}
+
+	if (ab_support(sd, ab, tick))
+		return;
+	if (ab_party_buffs(sd, ab, tick))
+		return;
+	if (ab_buffs(sd, ab, tick))
+		return;
+	ab_buff_items(sd, ab, tick);
+
+	// Defend ourselves / the master (only when "fight back" is on)
+	if (ab.fight_back) {
+		mob_data* target = ab_pick_target(sd, ab, tick);
+		if (target) {
+			ab_combat(sd, ab, *target, tick);
+			return;
+		}
+	}
+
+	if (far) {
+		if (pc_issit(&sd)) {
+			ab_stand(sd);
+			ab.sat_by_ab = false;
+		}
+		if (!unit_is_walking(&sd) || DIFF_TICK(tick, ab.next_follow) >= 0) {
+			ab.next_follow = tick + 1000;
+			unit_walktobl(&sd, master, ab.follow_dist, 0);
+		}
+		return;
+	}
+
+	// Close to the master and nothing to do: rest when allowed
+	if (!present || !unit_is_walking(master))
+		ab_rest(sd, ab, tick);
+}
+
 static void ab_tick(map_session_data& sd, s_autobattle& ab, t_tick tick) {
 	if (!battle_config.autobattle_enable) {
 		ab_stop(sd, "disabled by the server.", "\u0E40\u0E0B\u0E34\u0E23\u0E4C\u0E1F\u0E40\u0E27\u0E2D\u0E23\u0E4C\u0E1B\u0E34\u0E14\u0E23\u0E30\u0E1A\u0E1A\u0E19\u0E35\u0E49");
@@ -1130,6 +1353,10 @@ static void ab_tick(map_session_data& sd, s_autobattle& ab, t_tick tick) {
 	}
 	if (pc_isdead(&sd)) {
 		ab_stop(sd, "you died.", "\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E15\u0E32\u0E22\u0E41\u0E25\u0E49\u0E27");
+		return;
+	}
+	if (ab_pass_left(sd) == 0) {
+		ab_stop(sd, "the Auto Battle Pass has expired.", "Auto Battle Pass \u0E2B\u0E21\u0E14\u0E2D\u0E32\u0E22\u0E38\u0E41\u0E25\u0E49\u0E27");
 		return;
 	}
 	if (sd.state.vending || sd.state.buyingstore) {
@@ -1162,7 +1389,7 @@ static void ab_tick(map_session_data& sd, s_autobattle& ab, t_tick tick) {
 	if (ab.phase == ABP_RETURNING) {
 		if (DIFF_TICK(tick, ab.return_tick) < 0)
 			return;
-		if (!ab.return_mapindex || pc_setpos(&sd, ab.return_mapindex, ab.return_x, ab.return_y, CLR_TELEPORT) != SETPOS_OK) {
+		if (!ab_can_enter(ab.return_mapindex) || pc_setpos(&sd, ab.return_mapindex, ab.return_x, ab.return_y, CLR_TELEPORT) != SETPOS_OK) {
 			ab_stop(sd, "could not return to the hunting spot.", "\u0E44\u0E21\u0E48\u0E2A\u0E32\u0E21\u0E32\u0E23\u0E16\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E08\u0E38\u0E14\u0E25\u0E48\u0E32\u0E44\u0E14\u0E49");
 			return;
 		}
@@ -1176,12 +1403,15 @@ static void ab_tick(map_session_data& sd, s_autobattle& ab, t_tick tick) {
 		map_data* cur = map_getmapdata(sd.m);
 		uint16 cur_index = cur ? cur->index : 0;
 		// Carried to another map by accident (walked onto a warp portal...): go back to the hunting spot
-		if (ab.hunt_mapindex && cur_index && cur_index != ab.hunt_mapindex) {
+		// (not in follow mode: there the master decides where we are)
+		if (ab.follow_mode == ABFM_OFF && ab.hunt_mapindex && cur_index && cur_index != ab.hunt_mapindex) {
 			if (DIFF_TICK(tick, ab.return_tries_reset) >= 0) {
 				ab.return_tries = 0;
 				ab.return_tries_reset = tick + 60000;
 			}
-			if (battle_config.autobattle_warp_return && ab.return_tries < 3) {
+			// never warp back into a map the character may not warp into, or out of a map it may not warp out of
+			// (instances, event maps, MVP rooms... a GM or a script may have moved the character on purpose)
+			if (battle_config.autobattle_warp_return && ab.return_tries < 3 && ab_can_leave(sd.m) && ab_can_enter(ab.hunt_mapindex)) {
 				ab.return_tries++;
 				ab_msg(sd, "Left the hunting map (warp portal?), returning to the hunting spot.",
 					"\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E25\u0E48\u0E32 (\u0E0A\u0E19\u0E27\u0E32\u0E23\u0E4C\u0E1B?) \u0E01\u0E33\u0E25\u0E31\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E08\u0E38\u0E14\u0E25\u0E48\u0E32");
@@ -1212,11 +1442,11 @@ static void ab_tick(map_session_data& sd, s_autobattle& ab, t_tick tick) {
 	// Item supplies
 	if (DIFF_TICK(tick, ab.next_restock_check) >= 0) {
 		ab.next_restock_check = tick + 3000;
-		if (ab_need_restock(sd, ab)) {
+		if (ab.follow_mode == ABFM_OFF && ab_need_restock(sd, ab)) {
 			ab_restock(sd, ab, tick);
 			return;
 		}
-		if (ab.stop_no_item && !ab.restock) {
+		if (ab.stop_no_item && (!ab.restock || ab.follow_mode != ABFM_OFF)) {
 			if (ab.hp_item && !ab_item_count(sd, ab.hp_item)) {
 				ab_stop(sd, "out of HP recovery items.", "\u0E22\u0E32\u0E1F\u0E37\u0E49\u0E19 HP \u0E2B\u0E21\u0E14");
 				return;
@@ -1230,6 +1460,11 @@ static void ab_tick(map_session_data& sd, s_autobattle& ab, t_tick tick) {
 
 	if (sd.ud.skilltimer != INVALID_TIMER)
 		return;
+
+	if (ab.follow_mode != ABFM_OFF) {
+		ab_follow_tick(sd, ab, tick);
+		return;
+	}
 
 	if (ab_rest(sd, ab, tick))
 		return; // sitting down to regenerate
@@ -1371,6 +1606,8 @@ static void ab_list_skills(map_session_data& sd, s_autobattle& ab, const std::st
 			ok = (inf & (INF_SELF_SKILL | INF_SUPPORT_SKILL)) && !(inf & INF_ATTACK_SKILL) && sct != SC_NONE;
 		else if (kind == "support")
 			ok = (inf & INF_SUPPORT_SKILL) && !(inf & (INF_SELF_SKILL | INF_ATTACK_SKILL)) && sct == SC_NONE;
+		else if (kind == "pbuff") // buffs that can be cast on another player
+			ok = (inf & INF_SUPPORT_SKILL) && !(inf & (INF_SELF_SKILL | INF_ATTACK_SKILL)) && sct != SC_NONE;
 		else {
 			ok = (inf & (INF_ATTACK_SKILL | INF_GROUND_SKILL)) && !skill_get_nk(id, NK_NODAMAGE);
 			if (!ok && (inf & INF_SELF_SKILL) && sct == SC_NONE && skill_get_splash(id, lv) > 0 && !skill_get_nk(id, NK_NODAMAGE))
@@ -1435,6 +1672,13 @@ void autobattle_status(map_session_data& sd) {
 	ab_msg(sd, "[Recovery] HP: %s <%d%%  SP: %s <%d%%", "[\u0E1F\u0E37\u0E49\u0E19\u0E1F\u0E39] HP: %s <%d%%  SP: %s <%d%%",
 		ab->hp_item ? ab_item_name(ab->hp_item) : "-", ab->hp_pct, ab->sp_item ? ab_item_name(ab->sp_item) : "-", ab->sp_pct);
 	ab_show_slots(sd, "[Buffs]", "[\u0E1A\u0E31\u0E1E]", ab->buffs, AB_MAX_BUFF_SLOTS);
+	{
+		const char* fm_en = ab->follow_mode == ABFM_MASTER ? "follow player" : ab->follow_mode == ABFM_PARTY ? "follow party leader" : "off";
+		const char* fm_th = ab->follow_mode == ABFM_MASTER ? "\u0E15\u0E34\u0E14\u0E15\u0E32\u0E21\u0E1C\u0E39\u0E49\u0E40\u0E25\u0E48\u0E19" : ab->follow_mode == ABFM_PARTY ? "\u0E15\u0E34\u0E14\u0E15\u0E32\u0E21\u0E2B\u0E31\u0E27\u0E2B\u0E19\u0E49\u0E32\u0E1B\u0E32\u0E23\u0E4C\u0E15\u0E35\u0E49" : "\u0E1B\u0E34\u0E14";
+		ab_msg(sd, "[Follow] %s %s (distance %d)", "[\u0E15\u0E34\u0E14\u0E15\u0E32\u0E21] %s %s (\u0E23\u0E30\u0E22\u0E30 %d \u0E0A\u0E48\u0E2D\u0E07)", ab_pick(fm_en, fm_th).c_str(),
+			ab->follow_mode == ABFM_MASTER ? ab->follow_name.c_str() : "", ab->follow_dist);
+		ab_show_slots(sd, "  Buffs for others:", "  \u0E1A\u0E31\u0E1E\u0E43\u0E2B\u0E49\u0E1C\u0E39\u0E49\u0E2D\u0E37\u0E48\u0E19:", ab->pbuffs, AB_MAX_PBUFF_SLOTS);
+	}
 	ab_show_slots(sd, "[Support]", "[\u0E0B\u0E31\u0E1E\u0E1E\u0E2D\u0E23\u0E4C\u0E15]", ab->support, AB_MAX_SUPPORT_SLOTS);
 	ab_msg(sd, "[Loot] %s range:%d filter:%s", "[\u0E40\u0E01\u0E47\u0E1A\u0E02\u0E2D\u0E07] %s \u0E23\u0E30\u0E22\u0E30:%d \u0E15\u0E31\u0E27\u0E01\u0E23\u0E2D\u0E07:%s", ab_onoff(ab->loot).c_str(), ab->loot_range,
 		ab_pick("everything", "\u0E40\u0E01\u0E47\u0E1A\u0E17\u0E38\u0E01\u0E2D\u0E22\u0E48\u0E32\u0E07").c_str());
@@ -1503,6 +1747,15 @@ int64 autobattle_info(map_session_data& sd, const char* key, int32 a, int32 b) {
 		const s_ab_skill* s = sk(ab->support, AB_MAX_SUPPORT_SLOTS);
 		return s ? (k == "sup_id" ? s->skill_id : s->level) : 0;
 	}
+	if (k == "pbuff_id" || k == "pbuff_lv") {
+		const s_ab_skill* s = sk(ab->pbuffs, AB_MAX_PBUFF_SLOTS);
+		return s ? (k == "pbuff_id" ? s->skill_id : s->level) : 0;
+	}
+	if (k == "follow") return ab->follow_mode;
+	if (k == "fdist") return ab->follow_dist;
+	if (k == "fmaster") return ab->follow_char_id;
+	if (k == "fonline") return ab->follow_char_id && map_charid2sd(ab->follow_char_id) != nullptr;
+	if (k == "passleft") return ab_pass_left(sd);
 	if (k == "bi_id") return (a >= 0 && a < AB_MAX_BUFFITEMS) ? ab->buff_items[a].nameid : 0;
 	if (k == "bi_iv") return (a >= 0 && a < AB_MAX_BUFFITEMS) ? ab->buff_items[a].interval : 0;
 
@@ -1545,6 +1798,8 @@ std::string autobattle_str(map_session_data& sd, const char* key, int32 a) {
 	if (k == "atk") return (a >= 0 && a < AB_MAX_ATTACK_SLOTS) ? name(ab->attack[a].skill_id) : "";
 	if (k == "buff") return (a >= 0 && a < AB_MAX_BUFF_SLOTS) ? name(ab->buffs[a].skill_id) : "";
 	if (k == "sup") return (a >= 0 && a < AB_MAX_SUPPORT_SLOTS) ? name(ab->support[a].skill_id) : "";
+	if (k == "pbuff") return (a >= 0 && a < AB_MAX_PBUFF_SLOTS) ? name(ab->pbuffs[a].skill_id) : "";
+	if (k == "fmaster") return ab->follow_name;
 	if (k == "skname") return (a >= 0 && a < (int32)ab->cache_skills.size()) ? name(ab->cache_skills[a].first) : "";
 	if (k == "itname") return (a >= 0 && a < (int32)ab->cache_items.size()) ? ab_item_name(ab->cache_items[a].first) : "";
 	if (k == "mmname") return (a >= 0 && a < (int32)ab->cache_mobs.size()) ? ab_mob_name(ab->cache_mobs[a].first) : "";
@@ -1568,6 +1823,7 @@ static const char* ab_help_en[] = {
 	"restock <on|off> | restock +<item> <amount> / -<item> / reset | restock min <n>",
 	"safety hp <% 0=off> | safety item <item|off> | safety player <on|off> | safety weight <on|off> [%]",
 	"safety weightwarp <on|off> | safety noitem <on|off> | safety idle <sec 0=off> | safety mvp <on|off> | safety mini <on|off>",
+	"follow master <name> | follow party | follow off | follow dist <1-10> | pbuff <slot 1-8> <skill> [lv] | pbuff clear <slot|all>",
 };
 
 static const char* ab_help_th[] = {
@@ -1583,6 +1839,7 @@ static const char* ab_help_th[] = {
 	"restock <on|off> | restock +<\u0E44\u0E2D\u0E40\u0E17\u0E21> <\u0E08\u0E33\u0E19\u0E27\u0E19> / -<\u0E44\u0E2D\u0E40\u0E17\u0E21> / reset | restock min <\u0E08\u0E33\u0E19\u0E27\u0E19>",
 	"safety hp <% 0=\u0E1B\u0E34\u0E14> | safety item <\u0E44\u0E2D\u0E40\u0E17\u0E21|off> | safety player <on|off> | safety weight <on|off> [%]",
 	"safety weightwarp <on|off> | safety noitem <on|off> | safety idle <\u0E27\u0E34\u0E19\u0E32\u0E17\u0E35 0=\u0E1B\u0E34\u0E14> | safety mvp <on|off> | safety mini <on|off>",
+	"follow master <\u0E0A\u0E37\u0E48\u0E2D> \u0E15\u0E34\u0E14\u0E15\u0E32\u0E21\u0E1C\u0E39\u0E49\u0E40\u0E25\u0E48\u0E19 | follow party \u0E15\u0E34\u0E14\u0E15\u0E32\u0E21\u0E2B\u0E31\u0E27\u0E2B\u0E19\u0E49\u0E32\u0E1B\u0E32\u0E23\u0E4C\u0E15\u0E35\u0E49 | follow off | follow dist <1-10> | pbuff <\u0E0A\u0E48\u0E2D\u0E07 1-8> <\u0E2A\u0E01\u0E34\u0E25> [\u0E40\u0E25\u0E40\u0E27\u0E25] \u0E1A\u0E31\u0E1E\u0E43\u0E2B\u0E49\u0E1C\u0E39\u0E49\u0E2D\u0E37\u0E48\u0E19 | pbuff clear <\u0E0A\u0E48\u0E2D\u0E07|all>",
 };
 
 static bool ab_parse_onoff(const std::string& s, bool& out) {
@@ -1662,11 +1919,12 @@ static bool ab_edit_mob_list(map_session_data& sd, std::vector<uint16>& list, si
 
 bool autobattle_command(map_session_data& sd, const char* message, bool quiet) {
 	auto ab = autobattle_get(sd);
-	std::vector<std::string> tok;
+	std::vector<std::string> tok, raw;
 	{
 		std::istringstream iss(message ? message : "");
 		std::string t;
 		while (iss >> t) {
+			raw.push_back(t);
 			std::transform(t.begin(), t.end(), t.begin(), [](unsigned char c) { return (char)tolower(c); });
 			tok.push_back(t);
 		}
@@ -1756,9 +2014,9 @@ bool autobattle_command(map_session_data& sd, const char* message, bool quiet) {
 			s.cond_val = (uint8)v;
 		} else { help(); return false; }
 	}
-	else if (c == "skill" || c == "buff" || c == "support") {
-		s_ab_skill* slots = c == "skill" ? ab->attack : c == "buff" ? ab->buffs : ab->support;
-		int32 n = c == "skill" ? AB_MAX_ATTACK_SLOTS : c == "buff" ? AB_MAX_BUFF_SLOTS : AB_MAX_SUPPORT_SLOTS;
+	else if (c == "skill" || c == "buff" || c == "support" || c == "pbuff") {
+		s_ab_skill* slots = c == "skill" ? ab->attack : c == "buff" ? ab->buffs : c == "pbuff" ? ab->pbuffs : ab->support;
+		int32 n = c == "skill" ? AB_MAX_ATTACK_SLOTS : c == "buff" ? AB_MAX_BUFF_SLOTS : c == "pbuff" ? AB_MAX_PBUFF_SLOTS : AB_MAX_SUPPORT_SLOTS;
 		if (c == "support" && arg(1) == "hp") {
 			int32 v = atoi(arg(2).c_str());
 			if (v < 1 || v > 100) return ab_range_err(sd, 1, 100);
@@ -1889,6 +2147,44 @@ bool autobattle_command(map_session_data& sd, const char* message, bool quiet) {
 					ab->restock_items.push_back(r);
 				}
 			} else if (it != ab->restock_items.end()) ab->restock_items.erase(it);
+		} else { help(); return false; }
+	}
+	else if (c == "follow") {
+		std::string a = arg(1);
+		if (ab->running) {
+			ab_msg(sd, "Stop Auto Battle first.", "\u0E01\u0E23\u0E38\u0E13\u0E32\u0E2B\u0E22\u0E38\u0E14 Auto Battle \u0E01\u0E48\u0E2D\u0E19");
+			return false;
+		}
+		if (a == "off")
+			ab->follow_mode = ABFM_OFF;
+		else if (a == "party") {
+			if (!sd.status.party_id) {
+				ab_msg(sd, "You are not in a party.", "\u0E04\u0E38\u0E13\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E1B\u0E32\u0E23\u0E4C\u0E15\u0E35\u0E49");
+				return false;
+			}
+			ab->follow_mode = ABFM_PARTY;
+		} else if (a == "master") {
+			std::string name;
+			for (size_t i = 2; i < raw.size(); i++)
+				name += (i > 2 ? " " : "") + raw[i];
+			map_session_data* msd = name.empty() ? nullptr : map_nick2sd(name.c_str(), false);
+			if (msd == nullptr) {
+				ab_msg(sd, "Player not found (the player must be online).", "\u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E1C\u0E39\u0E49\u0E40\u0E25\u0E48\u0E19 (\u0E1C\u0E39\u0E49\u0E40\u0E25\u0E48\u0E19\u0E15\u0E49\u0E2D\u0E07\u0E2D\u0E2D\u0E19\u0E44\u0E25\u0E19\u0E4C\u0E2D\u0E22\u0E39\u0E48)");
+				return false;
+			}
+			if (msd == &sd) {
+				ab_msg(sd, "You cannot follow yourself.", "\u0E44\u0E21\u0E48\u0E2A\u0E32\u0E21\u0E32\u0E23\u0E16\u0E15\u0E34\u0E14\u0E15\u0E32\u0E21\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07\u0E44\u0E14\u0E49");
+				return false;
+			}
+			ab->follow_mode = ABFM_MASTER;
+			ab->follow_char_id = msd->status.char_id;
+			ab->follow_name = msd->status.name;
+			if (!ab_quiet)
+				ab_msg(sd, "Following %s.", "\u0E15\u0E34\u0E14\u0E15\u0E32\u0E21 %s \u0E41\u0E25\u0E49\u0E27", msd->status.name);
+		} else if (a == "dist") {
+			int32 v = atoi(arg(2).c_str());
+			if (v < 1 || v > 10) return ab_range_err(sd, 1, 10);
+			ab->follow_dist = (uint8)v;
 		} else { help(); return false; }
 	}
 	else if (c == "safety") {

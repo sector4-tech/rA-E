@@ -82,6 +82,7 @@ struct s_packet_db packet_db[MAX_PACKET_DB + 1];
 unsigned long color_table[COLOR_MAX];
 
 #include "clif_obfuscation.hpp"
+#include "client_limit.hpp"
 static bool clif_session_isValid( const map_session_data* sd );
 static void clif_loadConfirm( map_session_data *sd );
 static void clif_favorite_item( map_session_data& sd, uint16 index );
@@ -10929,6 +10930,7 @@ void clif_parse_LoadEndAck(int32 fd,map_session_data *sd)
 	if(sd->state.connect_new) {
 		int32 lv;
 		guild_notice = true;
+		client_limit_check(*sd); // rA-E: max game clients per IP
 		clif_skillinfoblock(*sd);
 		clif_hotkeys_send(sd,0);
 #if PACKETVER_MAIN_NUM >= 20190522 || PACKETVER_RE_NUM >= 20190508 || PACKETVER_ZERO_NUM >= 20190605

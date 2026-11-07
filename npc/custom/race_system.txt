@@ -202,9 +202,18 @@ function	script	F_RacePerkLines	{
 	return .@out$;
 }
 
-// Applies the bonuses of race getarg(0). Called from the status script (SC_QUEST_BUFF3) so bonus commands work.
-function	script	F_RaceBonus	{
+// Works out the bonuses of race getarg(0) at its current star ONCE and keeps them in permanent character variables
+// (race_bexp, race_bdrop, race_bdelay, race_bdef, race_bcrit, race_baspd). The status script of SC_QUEST_BUFF3
+// (db/pre-re/status.yml) only reads these numbers, so no text is parsed on every status recalculation.
+// getarg(0) = 0 clears all values (no active race).
+function	script	F_RaceCache	{
 	.@r = getarg(0);
+	race_bexp = 0;
+	race_bdrop = 0;
+	race_bdelay = 0;
+	race_bdef = 0;
+	race_bcrit = 0;
+	race_baspd = 0;
 	if (.@r < 1 || .@r > 10)
 		return;
 	.@st = getd("race_st" + .@r);
@@ -216,18 +225,17 @@ function	script	F_RaceBonus	{
 	explode(.@perk$, F_RaceData(.@r, 4), ",");
 	.@n = getarraysize(.@perk$);
 	for (.@i = 0; .@i < .@n; .@i++) {
+		deletearray .@v$[0], getarraysize(.@v$);
 		explode(.@v$, .@perk$[.@i], ":");
 		.@val = atoi(.@v$[.@st]);
 		switch (atoi(.@v$[0])) {
-		case 1:  bonus2 bExpAddRace, RC_All, .@val; break;
-		case 2:  bonus2 bDropAddRace, RC_All, .@val; break;
-		case 3:  bonus bDelayrate, -.@val; break;
-		case 6:  bonus bDefRate, .@val; break;
-		case 7:  break; // move speed is applied in C++ (status_calc_speed) from SC_QUEST_BUFF3 val2: it stacks like a mount
-		case 8:  bonus bCritical, .@val; break;
-		case 12: bonus bAspdRate, .@val; break;
-		case 14: break; // Luk% is applied in C++ (status_calc_luk) from SC_QUEST_BUFF3 val3
-		case 15: break; // Skill damage% is applied in C++ (battle_skill_damage) from SC_QUEST_BUFF3 val4
+		case 1:  race_bexp = .@val; break;
+		case 2:  race_bdrop = .@val; break;
+		case 3:  race_bdelay = .@val; break;
+		case 6:  race_bdef = .@val; break;
+		case 8:  race_bcrit = .@val; break;
+		case 12: race_baspd = .@val; break;
+		// 7 move speed, 14 Luk%, 15 skill damage% are applied in C++ from SC_QUEST_BUFF3 val2..val4
 		}
 	}
 	return;
@@ -261,6 +269,7 @@ function	script	F_RaceApply	{
 	if (.@a >= 1 && .@a <= 6)
 		.@r = getd("race_s" + .@a);
 	sc_end SC_QUEST_BUFF3;
+	callfunc "F_RaceCache", .@r; // bonus values for the status script (0 = clear)
 	// pass 1: everything off (some races share an effect), pass 2: the active race on
 	for (.@i = 1; .@i <= 10; .@i++) {
 		deletearray .@e$[0], getarraysize(.@e$);
